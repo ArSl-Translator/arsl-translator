@@ -1,0 +1,3 @@
+dataset_root: ./data/raw/KArSL
+labels_xlsx: ./data/raw/labels/KARSL-502_Labels.xlsx
+output_dir: ./outputs/index

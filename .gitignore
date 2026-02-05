@@ -1,0 +1,35 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+
+# ---- Jupyter / notebooks ----
+.ipynb_checkpoints/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Data / artifacts (DO NOT COMMIT) ----
+data/
+artifacts/
+outputs/
+
+# If you want to keep empty folders tracked:
+!data/.gitkeep
+!artifacts/.gitkeep
+!outputs/.gitkeep
+
+# ---- Logs ----
+*.log
+
+# ---- IDE ----
+.vscode/
+.idea/
