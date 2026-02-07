@@ -1,4 +1,15 @@
-pandas>=2.2.0
 openpyxl>=3.1.2
 tqdm>=4.66.0
-opencv-python>=4.9.0.80
+
+# API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+requests>=2.31.0
+
+# Auth & Database
+sqlalchemy>=2.0.25
+psycopg2-binary>=2.9.9
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1

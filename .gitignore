@@ -18,12 +18,14 @@ venv/
 Thumbs.db
 
 # ---- Data / artifacts (DO NOT COMMIT) ----
-data/
+# Ignore data contents but allow DVC tracking files
+data/**/*
+!data/**/*.dvc
+!data/**/.gitkeep
 artifacts/
 outputs/
 
 # If you want to keep empty folders tracked:
-!data/.gitkeep
 !artifacts/.gitkeep
 !outputs/.gitkeep
 

@@ -1,0 +1,54 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+
+# ---- Jupyter / notebooks ----
+.ipynb_checkpoints/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Data / artifacts (DO NOT COPY TO IMAGE) ----
+data/
+artifacts/
+outputs/
+
+# ---- Logs ----
+*.log
+
+# ---- IDE ----
+.vscode/
+.idea/
+
+# ---- Git / Version Control ----
+.git/
+.gitignore
+.gitattributes
+
+# ---- DVC ----
+.dvc/
+.dvcignore
+*.dvc
+
+# ---- Docker ----
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# ---- Documentation ----
+*.md
+README*
+
+# ---- Tests (optional - uncomment if you don't want tests in image) ----
+# tests/
+# *_test.py
+# test_*.py

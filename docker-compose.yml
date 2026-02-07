@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arsl_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: arsl_user
+      POSTGRES_PASSWORD: arsl_password
+      POSTGRES_DB: arsl_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: arsl_api
+    shm_size: '2gb'
+    ports:
+      - "8000:8000"
+    environment:
+      - DATASET_ROOT=/app/data/raw/KArSL
+      - LABELS_XLSX=/app/data/raw/labels/KARSL-502_Labels.xlsx
+      - OUTPUT_DIR=/app/outputs/index
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - DATABASE_URL=postgresql://arsl_user:arsl_password@postgres:5432/arsl_db
+      - JWT_SECRET_KEY=change-me-in-production-use-openssl-rand
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+    volumes:
+      - ./data:/app/data              # Mount data directory for access
+      - ./artifacts:/app/artifacts    # Mount artifacts directory
+      - ./outputs:/app/outputs        # Mount outputs directory
+      - ./src:/app/src                # Mount source code for hot reload
+      - ./scripts:/app/scripts        # Mount scripts for development
+    depends_on:
+      - mlflow
+      - postgres
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.13.0
+    container_name: arsl_mlflow
+    ports:
+      - "5000:5000"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+    volumes:
+      - ./mlruns:/mlflow
+
+  frontend:
+    image: node:18-alpine
+    container_name: arsl_frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
