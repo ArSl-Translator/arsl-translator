@@ -32,21 +32,21 @@ export default function LoginPage() {
     <div className="max-w-md mx-auto">
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-primary-500 text-white p-2 rounded-lg">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
             <LogIn className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Sign In</h2>
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Sign In</h2>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
             <input
               type="email"
               className="input"
@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1.5">Password</label>
             <input
               type="password"
               className="input"
@@ -69,14 +69,14 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="btn-primary w-full" disabled={loading}>
+          <button type="submit" className="btn-primary w-full py-3 rounded-xl" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-5 text-center text-sm text-gray-500">
           Don't have an account?{' '}
-          <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+          <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium transition-colors">
             Create one
           </Link>
         </p>

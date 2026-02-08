@@ -137,39 +137,36 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="rounded-2xl bg-white/70 backdrop-blur px-6 py-5">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-primary-500 text-white p-2 rounded-lg">
+      <div className="card">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h2>
             <p className="text-sm text-gray-500">
-              Insights from your most recent predictions
+              Insights from your predictions · all data
             </p>
           </div>
         </div>
-        <p className="text-xs text-gray-400">
-          Showing all predictions.
-        </p>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-200 border-t-primary-500"></div>
         </div>
       )}
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div className="px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {!loading && !error && (!history?.items || history.items.length === 0) && (
-        <div className="card text-center py-12 text-gray-500">
-          <Activity className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No predictions yet</p>
+        <div className="card text-center py-14 text-gray-500">
+          <Activity className="w-14 h-14 mx-auto mb-4 opacity-30" />
+          <p className="font-medium text-gray-600">No predictions yet</p>
           <p className="text-sm mt-1">
             Make a prediction to start seeing dashboard insights
           </p>

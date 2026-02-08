@@ -6,21 +6,32 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['DM Sans', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         primary: {
-          50: '#f5f7ff',
-          100: '#ebefff',
-          200: '#d6deff',
-          300: '#b3c1ff',
-          400: '#8b9eff',
-          500: '#667eea',
-          600: '#5a67d8',
-          700: '#4c51bf',
-          800: '#434190',
-          900: '#3c366b',
-        }
-      }
+          50: '#f0f4ff',
+          100: '#e0e9ff',
+          200: '#c7d6fe',
+          300: '#a4b8fc',
+          400: '#8093f8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
+        },
+      },
+      borderRadius: {
+        '2xl': '1rem',
+        '3xl': '1.25rem',
+      },
+      transitionDuration: {
+        200: '200ms',
+        300: '300ms',
+      },
     },
   },
   plugins: [],
-}
+};

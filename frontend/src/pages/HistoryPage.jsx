@@ -33,11 +33,11 @@ export default function HistoryPage() {
     <div className="max-w-4xl mx-auto">
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-primary-500 text-white p-2 rounded-lg">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Prediction History</h2>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Prediction History</h2>
             {history && (
               <p className="text-sm text-gray-500">{history.total} total predictions</p>
             )}
@@ -46,12 +46,12 @@ export default function HistoryPage() {
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-200 border-t-primary-500"></div>
           </div>
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -66,20 +66,20 @@ export default function HistoryPage() {
 
         {!loading && !error && history?.items.length > 0 && (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl bg-gray-50/50">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-2 font-medium text-gray-600">Date</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600">Type</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600">Top Prediction</th>
-                    <th className="text-right py-3 px-2 font-medium text-gray-600">Confidence</th>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-3.5 px-4 font-medium text-gray-600">Date</th>
+                    <th className="text-left py-3.5 px-4 font-medium text-gray-600">Type</th>
+                    <th className="text-left py-3.5 px-4 font-medium text-gray-600">Top Prediction</th>
+                    <th className="text-right py-3.5 px-4 font-medium text-gray-600">Confidence</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.items.map((item) => (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-2 text-gray-700">
+                    <tr key={item.id} className="border-b border-gray-100/80 last:border-0 hover:bg-white/60 transition-colors">
+                      <td className="py-3 px-4 text-gray-700">
                         {new Date(item.created_at).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -87,8 +87,8 @@ export default function HistoryPage() {
                           minute: '2-digit',
                         })}
                       </td>
-                      <td className="py-3 px-2">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-700">
                           {item.prediction_type === 'video' ? (
                             <Video className="w-3 h-3" />
                           ) : (
@@ -97,12 +97,12 @@ export default function HistoryPage() {
                           {item.prediction_type}
                         </span>
                       </td>
-                      <td className="py-3 px-2 font-medium text-gray-900">
+                      <td className="py-3 px-4 font-medium text-gray-900">
                         {item.top_prediction_text || item.top_prediction_label || '-'}
                       </td>
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-4 text-right">
                         {item.top_prediction_confidence != null ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-primary-50 text-primary-700">
                             {(item.top_prediction_confidence * 100).toFixed(1)}%
                           </span>
                         ) : (
@@ -115,24 +115,23 @@ export default function HistoryPage() {
               </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="btn-secondary flex items-center gap-1 !px-3 !py-2 text-sm"
+                  className="btn-secondary flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   Previous
                 </button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-500">
                   Page {page} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="btn-secondary flex items-center gap-1 !px-3 !py-2 text-sm"
+                  className="btn-secondary flex items-center gap-1.5 px-4 py-2 text-sm rounded-xl"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />

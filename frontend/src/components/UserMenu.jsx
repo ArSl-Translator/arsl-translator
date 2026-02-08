@@ -23,14 +23,14 @@ export default function UserMenu() {
       <div className="flex items-center gap-2">
         <Link
           to="/login"
-          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-xl hover:bg-primary-50/80 transition-colors"
         >
           <LogIn className="w-4 h-4" />
           Sign In
         </Link>
         <Link
           to="/register"
-          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           Sign Up
@@ -43,20 +43,20 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
       >
-        <div className="w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-bold">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 text-primary-600 flex items-center justify-center text-sm font-bold">
           {user.username.charAt(0).toUpperCase()}
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.username}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-xl py-1.5 z-50 border border-gray-100">
           <Link
             to="/profile"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg mx-1 transition-colors"
           >
             <User className="w-4 h-4" />
             Profile
@@ -64,18 +64,18 @@ export default function UserMenu() {
           <Link
             to="/history"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg mx-1 transition-colors"
           >
             <Clock className="w-4 h-4" />
             History
           </Link>
-          <hr className="my-1 border-gray-200" />
+          <hr className="my-1 border-gray-100" />
           <button
             onClick={() => {
               setOpen(false);
               logout();
             }}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg mx-1 transition-colors text-left"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
