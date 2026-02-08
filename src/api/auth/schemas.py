@@ -30,6 +30,15 @@ class UserUpdateRequest(BaseModel):
     email: Optional[str] = Field(None, min_length=5, max_length=255)
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

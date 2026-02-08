@@ -7,6 +7,8 @@ from src.api.auth.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
     UserUpdateRequest,
+    ChangePasswordRequest,
+    MessageResponse,
     UserResponse,
     TokenResponse,
     PredictionHistoryListResponse,
@@ -62,6 +64,20 @@ def login(req: UserLoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_profile(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_password(
+    req: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Change password for the authenticated user (requires current password)."""
+    if not verify_password(req.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.password_hash = hash_password(req.new_password)
+    db.commit()
+    return MessageResponse(message="Password updated successfully")
 
 
 @router.put("/me", response_model=UserResponse)
