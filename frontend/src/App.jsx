@@ -13,7 +13,7 @@ import { useAuth } from './context/AuthContext';
 import { healthCheck } from './services/api';
 
 function App() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [apiStatus, setApiStatus] = useState({ status: 'checking', modelLoaded: false });
 
   useEffect(() => {
@@ -97,28 +97,30 @@ function App() {
         <nav className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
-              <Link
-                to="/upload"
-                className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
-              >
-                <Video className="w-4 h-4" />
-                Video Upload
-              </Link>
-              <Link
-                to="/webcam"
-                className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
-              >
-                <Camera className="w-4 h-4" />
-                Webcam
-              </Link>
               {user && (
-                <Link
-                  to="/history"
-                  className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
-                >
-                  <Clock className="w-4 h-4" />
-                  History
-                </Link>
+                <>
+                  <Link
+                    to="/upload"
+                    className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
+                  >
+                    <Video className="w-4 h-4" />
+                    Video Upload
+                  </Link>
+                  <Link
+                    to="/webcam"
+                    className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Webcam
+                  </Link>
+                  <Link
+                    to="/history"
+                    className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
+                  >
+                    <Clock className="w-4 h-4" />
+                    History
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -127,11 +129,37 @@ function App() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
-            <Route path="/" element={<Navigate to="/upload" replace />} />
-            <Route path="/upload" element={<VideoUpload />} />
-            <Route path="/webcam" element={<WebcamCapture />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/" element={
+              <ProtectedRoute><Navigate to="/upload" replace /></ProtectedRoute>
+            } />
+            <Route path="/upload" element={
+              <ProtectedRoute><VideoUpload /></ProtectedRoute>
+            } />
+            <Route path="/webcam" element={
+              <ProtectedRoute><WebcamCapture /></ProtectedRoute>
+            } />
+            <Route path="/login" element={
+              authLoading ? (
+                <div className="flex justify-center py-20">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                </div>
+              ) : user ? (
+                <Navigate to="/upload" replace />
+              ) : (
+                <LoginPage />
+              )
+            } />
+            <Route path="/register" element={
+              authLoading ? (
+                <div className="flex justify-center py-20">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                </div>
+              ) : user ? (
+                <Navigate to="/upload" replace />
+              ) : (
+                <RegisterPage />
+              )
+            } />
             <Route path="/profile" element={
               <ProtectedRoute><ProfilePage /></ProtectedRoute>
             } />

@@ -14,7 +14,7 @@ from src.api.inference import ModelInference
 from src.api.auth.router import router as auth_router
 from src.api.database.init_db import create_tables
 from src.api.database.connection import get_db
-from src.api.auth.dependencies import get_optional_user
+from src.api.auth.dependencies import get_current_user
 from src.api.auth.history_service import save_prediction
 from src.api.models.user import User
 
@@ -85,7 +85,7 @@ def health():
 async def predict_video(
     file: UploadFile = File(...),
     top_k: int = 5,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -132,7 +132,7 @@ class FramesRequest(BaseModel):
 @app.post("/predict/frames")
 async def predict_frames(
     request: FramesRequest,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
