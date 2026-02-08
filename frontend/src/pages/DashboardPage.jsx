@@ -145,7 +145,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h2>
             <p className="text-sm text-gray-500">
-              Insights from your predictions · all data
+              Insights from your predictions
             </p>
           </div>
         </div>
