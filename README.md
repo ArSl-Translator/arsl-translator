@@ -1,341 +1,431 @@
-# 🤟 ArSL Translator
+# ArSL Translator
 
-**Arabic Sign Language Recognition System** using Deep Learning (ResNet18 + BiLSTM) with a modern web interface.
+**Arabic Sign Language Recognition System** -- an end-to-end pipeline from raw dataset to a web application where users can upload videos or use their webcam to get sign language predictions.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2-red)
 ![React](https://img.shields.io/badge/React-18-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)
-![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
+- [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Detailed Usage](#detailed-usage)
 - [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
+- [File-by-File Breakdown](#file-by-file-breakdown)
+- [Getting Started](#getting-started)
+- [Data Preparation Pipeline](#data-preparation-pipeline)
+- [Model Training](#model-training)
+- [Web Application](#web-application)
+- [API Reference](#api-reference)
+- [Current Status](#current-status)
+- [Next Steps & Roadmap](#next-steps--roadmap)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🎯 Overview
+## Overview
 
-This project implements a complete end-to-end pipeline for Arabic Sign Language (ArSL) recognition:
+This project implements a complete pipeline for Arabic Sign Language (ArSL) recognition using the **KArSL dataset** (502 sign classes, 3 signers, ~75,300 video samples). The system currently uses a **ResNet18 + BiLSTM** baseline model that extracts per-frame features with a CNN and models temporal relationships with a bidirectional LSTM.
 
-- **Dataset**: KArSL with 502 sign classes, 3 signers
-- **Model**: ResNet18 (CNN) + BiLSTM for video classification
-- **Backend**: FastAPI REST API with ML inference
-- **Frontend**: React + Vite web application
-- **ML Ops**: MLflow for experiment tracking
-- **Deployment**: Docker Compose
+### What exists today
 
-### What Can It Do?
-
-✅ Upload video files and get sign predictions
-✅ Real-time webcam capture with live predictions
-✅ Top-K predictions with confidence scores
-✅ Beautiful web interface with video/webcam support
-✅ Complete training pipeline with experiment tracking
+- A 3-phase data preparation and training pipeline (index, labels, train)
+- A baseline ResNet18 + BiLSTM model (only quick-tested so far, not seriously trained)
+- A FastAPI backend serving predictions with JWT authentication
+- A React frontend with video upload, webcam capture, prediction history, and a dashboard
+- MLflow integration for experiment tracking
+- Full Docker Compose deployment (Postgres, API, MLflow, Frontend)
 
 ---
 
-## ✨ Features
+## Tech Stack
 
-### 🎥 Video Recognition
-- Upload video files (.mp4, .avi, etc.)
-- Automatic frame extraction and preprocessing
-- Top-K predictions with confidence scores
-
-### 📹 Real-time Webcam
-- Live webcam capture in browser
-- Configurable frame buffer (30-120 frames)
-- Real-time sign language prediction
-- Visual recording indicator
-
-### 📊 ML Pipeline
-- Automated data preprocessing
-- Label mapping from Excel sheets
-- Training with MLflow experiment tracking
-- Model versioning and artifacts storage
-- Support for subset training (quick testing)
-
-### 🚀 Production-Ready
-- Dockerized deployment
-- REST API with CORS support
-- Health checks and monitoring
-- Comprehensive error handling
-- Modern React frontend
+| Layer | Technology |
+|-------|-----------|
+| **ML Model** | PyTorch, torchvision (ResNet18 + BiLSTM) |
+| **Training** | Custom training loop, sklearn for splits, MLflow for tracking |
+| **Backend** | FastAPI, SQLAlchemy, PostgreSQL, python-jose (JWT), passlib (bcrypt) |
+| **Frontend** | React 18, Vite, Tailwind CSS, Axios, Recharts, Lucide icons |
+| **Infrastructure** | Docker Compose, Uvicorn, Node 18 |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-### System Overview
+### System Diagram
 
 ```
-┌──────────────────┐      ┌──────────────────┐      ┌───────────────────┐
-│   Frontend       │ ───> │  FastAPI Backend │ ───> │  ML Model         │
-│ React + Vite     │      │  (Port 8000)     │      │  ResNet18 + LSTM  │
-│ (Port 3000)      │      └──────────────────┘      └───────────────────┘
-└──────────────────┘               │
-                                   ▼
-                          ┌──────────────────┐
-                          │   MLflow Server  │
-                          │   (Port 5000)    │
-                          └──────────────────┘
-
-All services managed by Docker Compose
+┌───────────────────┐       ┌───────────────────┐       ┌────────────────────┐
+│   React Frontend  │ HTTP  │   FastAPI Backend  │       │   ML Model         │
+│   (Port 3000)     │──────>│   (Port 8000)      │──────>│   ResNet18 + LSTM  │
+│   Vite + Tailwind │       │   Auth + Inference │       │   502 classes      │
+└───────────────────┘       └────────┬──────────┘       └────────────────────┘
+                                     │
+                          ┌──────────┼──────────┐
+                          │          │          │
+                          ▼          ▼          ▼
+                    ┌──────────┐ ┌────────┐ ┌────────┐
+                    │ Postgres │ │ MLflow │ │ Model  │
+                    │ (5432)   │ │ (5000) │ │ .pt    │
+                    │ Users,   │ │ Experi-│ │ check- │
+                    │ History  │ │ ments  │ │ point  │
+                    └──────────┘ └────────┘ └────────┘
 ```
 
 ### Model Architecture
 
 ```
-Input Video (T frames)
+Input: Video/Webcam frames
     │
-    ▼
-ResNet18 CNN (per-frame feature extraction)
+    ▼  Uniform sampling (T frames from the full sequence)
+T frames (T × 3 × 224 × 224)
     │
-    ▼
-Feature Sequence (T × 512)
+    ▼  ResNet18 (pretrained on ImageNet, fc layer removed)
+T feature vectors (T × 512)
     │
-    ▼
-Bidirectional LSTM (temporal modeling)
+    ▼  Bidirectional LSTM (hidden=256, 1 layer)
+Temporal encoding (T × 512)
     │
-    ▼
-Fully Connected + Softmax
+    ▼  Take last timestep → Dropout(0.2)
+Context vector (512)
     │
-    ▼
-Output (502 classes)
+    ▼  Fully Connected Linear layer
+Logits (502) → Softmax → Top-K predictions
 ```
 
 ---
 
-## 🔧 Prerequisites
+## Project Structure
 
-**Option 1: Docker (Recommended) - All-in-One**
-- Docker & Docker Compose
-- That's it! Everything else runs in containers.
-
-**Option 2: Local Installation**
-- Python 3.11+
-- Node.js 18+
-- CUDA-capable GPU (optional, for faster training)
-
-**Dataset Requirements:**
-- KArSL dataset in `data/raw/KArSL/`
-- Label Excel file in `data/raw/labels/KARSL-502_Labels.xlsx`
+```
+arsl-translator/
+│
+├── src/
+│   ├── data_prep/                    # Phase 1–2: data preparation modules
+│   │   ├── build_index.py            #   Walks KArSL dataset, builds CSV index
+│   │   └── build_labels.py           #   Reads Excel labels, creates JSON maps
+│   │
+│   ├── models/                       # Model architecture definitions
+│   │   └── baseline_resnet_lstm.py   #   ResNet18 + BiLSTM classifier
+│   │
+│   ├── train/                        # Training utilities
+│   │   ├── dataset.py                #   PyTorch Dataset for KArSL frames
+│   │   ├── trainer.py                #   Train/evaluate loop functions
+│   │   └── metrics.py                #   Top-K accuracy metric
+│   │
+│   ├── utils/                        # Shared utilities
+│   │   └── io.py                     #   File I/O helpers (ensure_dir, write_json)
+│   │
+│   └── api/                          # FastAPI web application
+│       ├── main.py                   #   App entry point, CORS, prediction endpoints
+│       ├── inference.py              #   Model loading & preprocessing for serving
+│       ├── auth/                     #   Authentication system
+│       │   ├── router.py             #     Auth endpoints (register, login, change-password, profile, history)
+│       │   ├── schemas.py            #     Pydantic request/response models
+│       │   ├── security.py           #     JWT creation, password hashing (bcrypt)
+│       │   ├── dependencies.py       #     get_current_user dependency injection
+│       │   └── history_service.py    #     Saves predictions to DB for history tracking
+│       ├── database/                 #   Database layer
+│       │   ├── connection.py         #     SQLAlchemy engine, session factory, Base
+│       │   └── init_db.py            #     create_tables() with retry logic
+│       └── models/                   #   SQLAlchemy ORM models
+│           ├── user.py               #     User table (email, username, password_hash)
+│           └── prediction_history.py #     PredictionHistory table (type, label, confidence)
+│
+├── scripts/                          # Entry-point scripts for the ML pipeline
+│   ├── phase1_build_index.py         #   Run phase 1: build data_index.csv
+│   ├── phase2_build_labels.py        #   Run phase 2: build label JSON maps
+│   └── phase3_train_baseline.py      #   Run phase 3: train ResNet18 + BiLSTM
+│
+├── frontend/                         # React web application
+│   └── src/
+│       ├── main.jsx                  #   App entry point (React StrictMode + AuthProvider)
+│       ├── App.jsx                   #   Routing, layout, navigation, API status
+│       ├── context/
+│       │   └── AuthContext.jsx        #   Auth state management (login, register, changePassword)
+│       ├── services/
+│       │   └── api.js                #   Axios client with JWT interceptor
+│       ├── components/
+│       │   ├── VideoUpload.jsx       #   Video file upload + prediction UI
+│       │   ├── WebcamCapture.jsx     #   Webcam recording + prediction UI
+│       │   ├── PredictionResults.jsx #   Prediction display with confidence bars
+│       │   ├── ProtectedRoute.jsx    #   Auth guard for routes
+│       │   └── UserMenu.jsx          #   User dropdown (profile, sign out)
+│       └── pages/
+│           ├── LoginPage.jsx         #   Sign in form
+│           ├── RegisterPage.jsx      #   Sign up form
+│           ├── ProfilePage.jsx       #   Edit profile + change password
+│           ├── HistoryPage.jsx       #   Paginated prediction history
+│           └── DashboardPage.jsx     #   Usage statistics and charts
+│
+├── data/raw/                         # Dataset files (not committed to git)
+│   ├── KArSL/                        #   KArSL dataset (01/, 02/, 03/ signer folders)
+│   └── labels/                       #   KARSL-502_Labels.xlsx
+│
+├── outputs/index/                    # Generated by phase 1 & 2
+│   ├── data_index.csv                #   Every sample: signer, split, label, frames_dir
+│   ├── label2text.json               #   "1" → "Arabic text"
+│   └── text2label.json               #   "Arabic text" → 1
+│
+├── artifacts/models/                 # Trained model checkpoints
+├── mlruns/                           # MLflow experiment data
+│
+├── docker-compose.yml                # Defines all services (postgres, api, mlflow, frontend)
+├── Dockerfile                        # Python API container image
+├── requirements.base.txt             # Heavy deps (torch, opencv) — cached Docker layer
+└── requirements.txt                  # Lighter deps (fastapi, auth libs)
+```
 
 ---
 
-## 🚀 Quick Start (3 Steps!)
+## File-by-File Breakdown
 
-### 1. Clone & Start Everything
+### ML Pipeline (`src/` and `scripts/`)
+
+#### `src/data_prep/build_index.py`
+
+Walks the KArSL dataset directory tree (`data/raw/KArSL/{signer}/{split}/{sample_folder}/`) and builds a flat CSV index. For each sample folder that contains image frames, it extracts the label ID from the folder name using a regex (`_0001_` pattern), counts the frames, and records the absolute path. The output `data_index.csv` has columns: `sample_id`, `signer`, `split`, `label_id`, `label_id_str`, `frames_dir`, `n_frames`.
+
+#### `src/data_prep/build_labels.py`
+
+Reads the Excel file `KARSL-502_Labels.xlsx` and produces two JSON mappings: `label2text.json` (label ID → Arabic text) and `text2label.json` (Arabic text → label ID). It auto-detects which Excel columns hold the numeric ID and the text description using a heuristic that scores columns by how many valid label IDs or non-numeric strings they contain.
+
+#### `src/models/baseline_resnet_lstm.py`
+
+Defines `ResNetLSTMClassifier`, the current baseline model. Takes a batch of video clips `(B, T, 3, H, W)`, passes each frame through a pretrained ResNet18 (with the final FC layer replaced by Identity) to get 512-dim features, feeds the sequence through a 1-layer bidirectional LSTM (hidden=256), takes the last timestep output (512-dim after concatenating both directions), applies dropout, and passes through a linear classifier to produce 502-class logits.
+
+#### `src/train/dataset.py`
+
+Defines `KArSLFramesDataset`, a PyTorch Dataset. For each sample in the data index, it reads the frame image files from disk, uniformly samples `num_frames` frames (default 32), resizes them to `img_size×img_size` (default 224), normalizes with ImageNet mean/std, and returns a `(T, 3, H, W)` float tensor with a 0-indexed label. Handles edge cases like missing frames (blank fallback) and short clips (pads by repeating the last frame).
+
+#### `src/train/trainer.py`
+
+Contains `train_one_epoch()` and `evaluate()` functions. Both iterate over a DataLoader, compute cross-entropy loss and top-1/top-5 accuracy per batch, and return averaged metrics. Training uses AdamW with gradient zeroing via `set_to_none=True`. Evaluation runs under `@torch.no_grad()`. Both display progress bars via tqdm.
+
+#### `src/train/metrics.py`
+
+Single function `topk_accuracy(logits, targets, k)` — computes the fraction of samples where the true label appears in the top-K predicted classes.
+
+#### `src/utils/io.py`
+
+Three small helpers used across the pipeline: `ensure_dir(path)` creates directories recursively, `write_json(path, data)` writes JSON with UTF-8 encoding, `read_env_default(name, default)` reads an environment variable with a fallback.
+
+#### `scripts/phase1_build_index.py`
+
+Entry point for Phase 1. Reads `DATASET_ROOT` and `OUTPUT_DIR` from environment variables, calls `build_data_index()`, saves `data_index.csv`, and prints a validation summary.
+
+#### `scripts/phase2_build_labels.py`
+
+Entry point for Phase 2. Reads `LABELS_XLSX` and `OUTPUT_DIR` from environment variables, calls `build_label_maps()` and `save_label_maps()`, and prints the count plus any missing label IDs.
+
+#### `scripts/phase3_train_baseline.py`
+
+Entry point for Phase 3. Parses CLI arguments (signer filter, epochs, batch size, learning rate, etc.), loads `data_index.csv`, filters by signer if requested, splits train data into train/val (with optional stratification), creates DataLoaders, instantiates the model, and runs the training loop. Every epoch logs metrics to MLflow. Saves the best checkpoint (by validation top-1 accuracy) to disk and registers it in MLflow Model Registry. Finally evaluates on the held-out test set.
+
+### API & Inference (`src/api/`)
+
+#### `src/api/main.py`
+
+FastAPI application entry point. On startup, creates database tables and loads the trained model checkpoint. Exposes `POST /predict/video` (accepts a video file upload) and `POST /predict/frames` (accepts base64-encoded frames from the webcam). Both endpoints decode the input, run inference via `ModelInference`, save the result to prediction history, and return top-K predictions with confidence scores. Also exposes `GET /health` for status checks.
+
+#### `src/api/inference.py`
+
+`ModelInference` class that handles the full serving pipeline: loads the model checkpoint and label map, preprocesses video files or raw frames (decode → resize → ImageNet normalize → uniform temporal sampling → tensor), runs forward pass under `torch.no_grad()`, and converts 0-indexed model outputs back to 1-indexed label IDs with Arabic text.
+
+#### `src/api/auth/`
+
+Full JWT-based authentication system: user registration, login, profile updates, password changes (with current password verification). Uses bcrypt for password hashing, python-jose for JWT tokens, and SQLAlchemy for persistence in PostgreSQL. Prediction history is stored per-user with type, label, confidence, and timestamp.
+
+### Frontend (`frontend/src/`)
+
+React 18 SPA built with Vite and styled with Tailwind CSS. Features:
+
+- **Video Upload** — drag-and-drop or file picker, sends video to `/predict/video`, displays top-K results with confidence bars
+- **Webcam Capture** — accesses browser camera, records configurable frame buffers (30–120 frames), sends to `/predict/frames`
+- **Authentication** — register, login, change password on profile page, JWT stored in localStorage with Axios interceptors
+- **History** — paginated list of past predictions with type, label, confidence, and timestamps
+- **Dashboard** — usage statistics and charts (powered by Recharts)
+- **Protected Routes** — all main pages require authentication, redirects to login if not authenticated
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Docker & Docker Compose** (recommended — everything runs in containers)
+- The **KArSL dataset** extracted to `data/raw/KArSL/`
+- The **label file** at `data/raw/labels/KARSL-502_Labels.xlsx`
+
+### 1. Start all services
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/arsl-translator.git
-cd arsl-translator
-
-# Start ALL services (API + MLflow + Frontend) with ONE command!
-docker compose up -d
+docker compose up -d --build
 ```
 
-✅ That's it! All services are now running:
-- **Frontend**: http://localhost:3000 👈 **Start here!**
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **MLflow**: http://localhost:5000
+This starts 4 containers:
 
-### 2. Prepare Data
+| Service | Port | Description |
+|---------|------|-------------|
+| `arsl_frontend` | 3000 | React web app |
+| `arsl_api` | 8000 | FastAPI backend |
+| `arsl_mlflow` | 5000 | MLflow experiment tracker |
+| `arsl_postgres` | 5432 | PostgreSQL database |
+
+### 2. Prepare the data
 
 ```bash
-# Build data index
+# Phase 1: Scan dataset and build the sample index
 docker compose exec api python scripts/phase1_build_index.py
 
-# Build label mappings
+# Phase 2: Parse the Excel label file into JSON maps
 docker compose exec api python scripts/phase2_build_labels.py
 ```
 
-### 3. Train Model (Quick Test)
+### 3. Train the model
 
 ```bash
-# Quick training with 200 samples (~5-10 minutes)
+# Quick test (~5 min) — trains on 200 samples for 1 epoch
 docker compose exec api python scripts/phase3_train_baseline.py \
   --use_signer 01 --epochs 1 --batch_size 32 \
   --max_samples 200 --num_frames 16
 ```
 
-### 🎉 Done!
+### 4. Use the app
 
-Open http://localhost:3000 and start recognizing signs!
+Open http://localhost:3000, register an account, and start predicting.
 
 ---
 
-## 📖 Detailed Usage
+## Data Preparation Pipeline
 
 ### Phase 1: Build Data Index
 
-Creates an index of all video samples in the dataset.
-
 ```bash
 docker compose exec api python scripts/phase1_build_index.py
 ```
 
-**Output**: `outputs/index/data_index.csv`
+**What it does:** Recursively walks `data/raw/KArSL/{signer}/{split}/` directories. For every folder that contains image files (.jpg/.png), it extracts the label ID from the folder name, counts the frames, and records the full path. Produces `outputs/index/data_index.csv`.
+
+**Expected output for a complete dataset:** 75,300 samples (502 classes x 3 signers x 50 repetitions).
 
 ### Phase 2: Build Label Maps
-
-Processes the Excel label file and creates JSON mappings.
 
 ```bash
 docker compose exec api python scripts/phase2_build_labels.py
 ```
 
-**Outputs**:
-- `outputs/index/label2text.json` - Maps label IDs to text
-- `outputs/index/text2label.json` - Maps text to label IDs
+**What it does:** Reads `KARSL-502_Labels.xlsx`, auto-detects which columns contain the numeric label IDs (1–502) and the Arabic text descriptions, then writes `label2text.json` and `text2label.json` to `outputs/index/`.
 
-### Phase 3: Train Model
+---
 
-Train the ResNet18 + BiLSTM model with various configurations.
+## Model Training
 
-**Quick Test (5-10 minutes):**
+### Phase 3: Train Baseline
+
 ```bash
-docker compose exec api python scripts/phase3_train_baseline.py \
-  --use_signer 01 --epochs 1 --batch_size 32 \
-  --max_samples 200 --num_frames 16
+docker compose exec api python scripts/phase3_train_baseline.py [OPTIONS]
 ```
 
-**Single Signer (1-2 hours):**
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--use_signer` | `all` | Signer filter: `01`, `02`, `03`, or `all` |
+| `--epochs` | `10` | Number of training epochs |
+| `--batch_size` | `8` | Batch size |
+| `--lr` | `3e-4` | Learning rate (AdamW) |
+| `--weight_decay` | `1e-4` | Weight decay |
+| `--num_frames` | `32` | Frames sampled per video |
+| `--img_size` | `224` | Input image resolution |
+| `--val_ratio` | `0.1` | Fraction of train set used for validation |
+| `--max_samples` | `None` | Limit samples (for quick tests) |
+| `--seed` | `42` | Random seed |
+
+**Example configurations:**
+
 ```bash
+# Single signer, moderate training (~1-2 hours)
 docker compose exec api python scripts/phase3_train_baseline.py \
   --use_signer 01 --epochs 20 --batch_size 16
-```
 
-**All Signers, Production (several hours):**
-```bash
+# All signers, full training (several hours)
 docker compose exec api python scripts/phase3_train_baseline.py \
   --use_signer all --epochs 30 --batch_size 8
 ```
 
-**Training Options:**
-- `--use_signer` : Signer ID (01, 02, 03, or all) - default: all
-- `--epochs` : Number of epochs - default: 10
-- `--batch_size` : Batch size - default: 8
-- `--lr` : Learning rate - default: 3e-4
-- `--num_frames` : Frames per video - default: 32
-- `--img_size` : Image size - default: 224
-- `--max_samples` : Limit samples for testing - default: None (use all)
+**What happens during training:**
+1. Loads `data_index.csv`, optionally filters by signer
+2. Splits the train partition into train/val (90/10 by default, stratified when using full data)
+3. Creates PyTorch DataLoaders with uniform frame sampling
+4. Trains a ResNet18 (ImageNet-pretrained) + BiLSTM with cross-entropy loss and AdamW
+5. Logs train/val loss, top-1, and top-5 accuracy to MLflow each epoch
+6. Saves the best checkpoint (by val top-1) to `artifacts/models/`
+7. Evaluates the best checkpoint on the test set
+8. Registers the model in MLflow Model Registry
 
-**View Training Progress:**
-MLflow UI: http://localhost:5000
-
----
-
-## 📁 Project Structure
-
-```
-arsl-translator/
-├── frontend/                         # React frontend application
-│   ├── src/
-│   │   ├── components/              # React components
-│   │   │   ├── VideoUpload.jsx      # Video upload interface
-│   │   │   ├── WebcamCapture.jsx    # Webcam interface
-│   │   │   └── PredictionResults.jsx # Results display
-│   │   ├── services/
-│   │   │   └── api.js               # API client
-│   │   ├── App.jsx                  # Main app
-│   │   └── main.jsx                 # Entry point
-│   ├── package.json
-│   └── vite.config.js
-│
-├── src/
-│   ├── api/
-│   │   ├── main.py                  # FastAPI application
-│   │   └── inference.py             # ML inference logic
-│   ├── data_prep/
-│   │   ├── build_index.py           # Dataset indexer
-│   │   └── build_labels.py          # Label processor
-│   ├── models/
-│   │   └── baseline_resnet_lstm.py  # Model architecture
-│   ├── train/
-│   │   ├── dataset.py               # PyTorch dataset
-│   │   └── trainer.py               # Training utilities
-│   └── utils/
-│       └── io.py                    # I/O utilities
-│
-├── scripts/
-│   ├── phase1_build_index.py        # Phase 1: Build index
-│   ├── phase2_build_labels.py       # Phase 2: Process labels
-│   └── phase3_train_baseline.py     # Phase 3: Train model
-│
-├── examples/
-│   ├── test_video_upload.py         # Test video upload
-│   ├── test_webcam.py               # Test webcam (Python)
-│   ├── webcam_web.html              # Test webcam (HTML)
-│   └── README.md                    # Examples documentation
-│
-├── data/
-│   ├── raw/
-│   │   ├── KArSL/                   # Dataset (not committed)
-│   │   └── labels/                  # Label files (not committed)
-│   └── processed/                   # Processed data
-│
-├── outputs/
-│   └── index/                       # Generated indices
-│
-├── artifacts/
-│   └── models/                      # Trained models
-│
-├── mlruns/                          # MLflow experiments
-│
-├── docker-compose.yml               # Docker services
-├── Dockerfile                       # API container
-├── requirements.txt                 # Python dependencies
-└── README.md                        # This file
-```
+**Monitor training:** Open MLflow at http://localhost:5000 to view experiments, compare runs, and check metrics.
 
 ---
 
-## 🔌 API Documentation
+## Web Application
 
-### Base URL
-```
-http://localhost:8000
-```
+### Frontend (http://localhost:3000)
 
-### Endpoints
+- **Video Upload** — upload .mp4/.avi files, get top-5 predictions with confidence
+- **Webcam** — record from browser camera, adjustable buffer length, real-time prediction
+- **History** — see all your past predictions with pagination
+- **Dashboard** — charts showing usage over time, prediction type breakdown, top predicted signs
+- **Profile** — update username/email, change password
+- **Auth** — register, login, JWT-based session management
 
-#### 1. Health Check
-```http
-GET /health
-```
+### Running frontend locally (without Docker)
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "model_loaded": true
-}
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-#### 2. Predict from Video
-```http
-POST /predict/video?top_k=5
-Content-Type: multipart/form-data
-```
+Set `VITE_API_URL=http://localhost:8000` in `frontend/.env` for local dev.
 
-**Parameters:**
-- `file` (form-data): Video file
-- `top_k` (query): Number of top predictions (default: 5)
+---
 
-**Response:**
+## API Reference
+
+**Base URL:** `http://localhost:8000` | **Interactive docs:** `http://localhost:8000/docs`
+
+### Public Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check (returns `model_loaded` status) |
+
+### Auth Endpoints (prefix: `/auth`)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/auth/register` | No | Create account, returns JWT |
+| `POST` | `/auth/login` | No | Login, returns JWT |
+| `GET` | `/auth/me` | Yes | Get current user profile |
+| `PUT` | `/auth/me` | Yes | Update username/email |
+| `POST` | `/auth/change-password` | Yes | Change password (requires current password) |
+| `GET` | `/auth/history` | Yes | Paginated prediction history |
+
+### Prediction Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/predict/video?top_k=5` | Yes | Upload video file, get predictions |
+| `POST` | `/predict/frames` | Yes | Send base64 frames (webcam), get predictions |
+
+**Prediction response format:**
+
 ```json
 {
   "top_prediction": {
@@ -344,214 +434,127 @@ Content-Type: multipart/form-data
     "confidence": 0.8723
   },
   "top_k_predictions": [
-    {
-      "label_id": "45",
-      "text": "مرحبا",
-      "confidence": 0.8723
-    },
-    ...
+    { "label_id": "45", "text": "مرحبا", "confidence": 0.8723 },
+    { "label_id": "12", "text": "شكرا", "confidence": 0.0531 }
   ]
 }
 ```
 
-#### 3. Predict from Frames
-```http
-POST /predict/frames
-Content-Type: application/json
-```
+---
 
-**Body:**
-```json
-{
-  "frames": ["base64_image1", "base64_image2", ...],
-  "top_k": 5
-}
-```
+## Current Status
 
-**Response:** Same as video prediction
+The project has a **working end-to-end pipeline** but the ML model is still at baseline level:
 
-### Interactive API Docs
+- **Data pipeline** — complete and functional (phase 1 & 2)
+- **Baseline model** — ResNet18 + BiLSTM, only quick-tested with ~200 samples for 1 epoch (~6 minutes). Accuracy is very low because the model has barely been trained
+- **Web app** — fully functional (video upload, webcam, auth, history, dashboard)
+- **Infrastructure** — Docker Compose with Postgres, MLflow, hot-reload dev setup
 
-Visit http://localhost:8000/docs for Swagger UI documentation.
+The real ML training work has not started yet. The current checkpoint is essentially a proof-of-concept that the pipeline runs end-to-end.
 
 ---
 
-## 🎨 Frontend
+## Next Steps & Roadmap
 
-The frontend is built with **React**, **Vite**, and **Tailwind CSS**.
+### Phase A: Serious Baseline Training
 
-### Running with Docker (Recommended)
+- [ ] Train the current ResNet18 + BiLSTM on **all 3 signers** for **20-30 epochs** with the full dataset
+- [ ] Experiment with different `num_frames` values (16, 32, 48) to find the sweet spot
+- [ ] Experiment with batch sizes and learning rates — log everything to MLflow and compare
+- [ ] Add a **learning rate scheduler** (e.g., CosineAnnealingLR or ReduceLROnPlateau) to the training script
+- [ ] Add **data augmentation** to the dataset (random crops, horizontal flips, color jitter, temporal jitter)
+- [ ] Evaluate per-class accuracy to find which signs are hardest to classify
 
-The frontend runs automatically when you start Docker Compose:
+### Phase B: Stronger Model Architectures
 
-```bash
-docker compose up -d
-```
+- [ ] Try **ResNet50** or **EfficientNet-B0** as the CNN backbone (deeper features)
+- [ ] Experiment with **Transformer-based temporal modeling** (replace BiLSTM with a temporal Transformer encoder)
+- [ ] Try **3D CNNs** like SlowFast, R(2+1)D, or Video Swin Transformer that process spatiotemporal features natively
+- [ ] Explore **attention pooling** instead of taking only the last LSTM timestep
+- [ ] Add **multi-head temporal attention** over the LSTM outputs
 
-Available at: http://localhost:3000
+### Phase C: Training Infrastructure Improvements
 
-### Local Development (Without Docker)
+- [ ] Implement **early stopping** to avoid overfitting and wasting compute
+- [ ] Add a **validation loss plateau detector** that automatically reduces LR
+- [ ] Add **gradient clipping** for more stable LSTM training
+- [ ] Support **mixed-precision training** (fp16) for faster training on GPU
+- [ ] Add **checkpoint resumption** so training can be paused and continued
+- [ ] Implement **cross-validation** or signer-wise leave-one-out evaluation
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Phase D: Data & Preprocessing
 
-App available at: http://localhost:3000
+- [ ] Analyze the dataset distribution — check for class imbalance across the 502 signs
+- [ ] Implement **weighted sampling** or **class-weighted loss** if imbalance is significant
+- [ ] Add **hand/body pose estimation** as an auxiliary input (e.g., MediaPipe landmarks)
+- [ ] Explore **optical flow** as an additional input modality for motion information
+- [ ] Implement smarter frame sampling (e.g., motion-based sampling instead of uniform)
 
-### Build for Production
+### Phase E: App & Deployment
 
-```bash
-cd frontend
-npm run build
-npm run preview
-```
-
-### Features
-
-- **Video Upload Tab**: Upload pre-recorded videos for prediction
-- **Webcam Tab**: Real-time webcam capture and prediction
-- **API Status Indicator**: Shows API and model status
-- **Results Display**: Beautiful UI with confidence scores
-- **Responsive Design**: Works on desktop and mobile
-
-### Configuration
-
-The frontend is configured via `docker-compose.yml` environment variables. No manual `.env` file needed when using Docker!
-
-For local development outside Docker, create `frontend/.env`:
-
-```env
-VITE_API_URL=http://localhost:8000
-```
+- [ ] Add a **model selection** feature in the UI to switch between different trained models
+- [ ] Show **per-sign accuracy breakdown** on the dashboard
+- [ ] Add **real-time continuous recognition** mode for the webcam (predict every N seconds)
+- [ ] Add **confidence threshold** — display "uncertain" if the top prediction confidence is too low
+- [ ] Implement model **A/B testing** using MLflow model registry versions
+- [ ] Production deployment with HTTPS, proper secrets management, and a reverse proxy
 
 ---
 
-## 🐳 Docker Compose Commands
+## Troubleshooting
 
-All services (Frontend, API, MLflow) are managed together:
+### Model not loading (`model_loaded: false`)
+
+The model checkpoint doesn't exist yet. Train it first:
 
 ```bash
-# Start all services
-docker compose up -d
-
-# View logs
-docker compose logs -f           # All services
-docker compose logs -f api       # API only
-docker compose logs -f frontend  # Frontend only
-
-# Stop all services
-docker compose down
-
-# Restart a service
-docker compose restart api
-docker compose restart frontend
-
-# Rebuild and restart
-docker compose up -d --build
-
-# Check service status
-docker compose ps
-
-# Execute commands in containers
-docker compose exec api python scripts/phase1_build_index.py
-docker compose exec api bash     # Open shell in API container
-```
-
-### Service Details
-
-| Service  | Container Name  | Port | Description |
-|----------|----------------|------|-------------|
-| frontend | arsl_frontend  | 3000 | React web application |
-| api      | arsl_api       | 8000 | FastAPI backend + ML inference |
-| mlflow   | arsl_mlflow    | 5000 | MLflow experiment tracking |
-
----
-
-## 🐛 Troubleshooting
-
-### Model Not Loading
-
-**Problem:** API health shows `model_loaded: false`
-
-**Solution:**
-```bash
-# Train the model first
 docker compose exec api python scripts/phase3_train_baseline.py \
   --use_signer 01 --epochs 1 --max_samples 200
 ```
 
-### CORS Errors
+### Out of memory during training
 
-**Problem:** Frontend can't connect to API
+Reduce memory usage:
 
-**Solution:**
 ```bash
-# Restart API
+--batch_size 4     # Smaller batches
+--num_frames 16    # Fewer frames per sample
+--max_samples 500  # Fewer total samples
+```
+
+### Frontend can't connect to API
+
+```bash
 docker compose restart api
-
-# Check API is running
-curl http://localhost:8000/health
+curl http://localhost:8000/health    # Verify API is up
 ```
 
-### Out of Memory During Training
+### Webcam not working
 
-**Solution:**
+- Grant camera permissions in your browser
+- Use Chrome or Edge (best WebRTC support)
+- Must be on `localhost` or HTTPS
+
+### Database issues after model changes
+
+If you changed the User model or database schema, recreate the volume:
+
 ```bash
-# Reduce batch size
---batch_size 4
-
-# Use fewer frames
---num_frames 16
-
-# Limit training samples
---max_samples 500
+docker compose down -v
+docker compose up -d --build
 ```
 
-### Slow Training
-
-**Solution:**
-- Check GPU: `docker compose exec api python -c "import torch; print(torch.cuda.is_available())"`
-- Increase batch size if memory allows
-- Use `--max_samples` for quick tests
-
-### Webcam Not Working
-
-**Solution:**
-- Grant browser camera permissions
-- Use Chrome (recommended)
-- Ensure HTTPS or localhost
-
 ---
 
-## 📚 Dataset
+## Docker Commands Reference
 
-**KArSL (Korean-Arabic Sign Language) Dataset:**
-- 502 sign classes
-- 3 professional signers
-- Train/test splits included
-- Frame sequences extracted from videos
-
-Place dataset at: `data/raw/KArSL/`
-Place labels at: `data/raw/labels/KARSL-502_Labels.xlsx`
-
----
-
-## 📝 License
-
-MIT License - see LICENSE file for details
-
----
-
-## 🙏 Acknowledgments
-
-- KArSL Dataset creators
-- PyTorch and FastAPI communities
-- React and Vite teams
-- MLflow project
-
----
-
-**Built with ❤️ for Arabic Sign Language Recognition**
-
+```bash
+docker compose up -d --build         # Start everything (rebuild if needed)
+docker compose down                  # Stop all services
+docker compose down -v               # Stop + delete database volume
+docker compose logs -f api           # Follow API logs
+docker compose logs -f frontend      # Follow frontend logs
+docker compose exec api bash         # Shell into API container
+docker compose ps                    # Check service status
+```

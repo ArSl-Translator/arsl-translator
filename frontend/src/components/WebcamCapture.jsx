@@ -19,6 +19,8 @@ const WebcamCapture = () => {
 
   const [bufferSize, setBufferSize] = useState(60);
   const captureIntervalRef = useRef(null);
+  const frameBufferRef = useRef([]);
+  const isPredictingRef = useRef(false);
 
   const startWebcam = async () => {
     try {
@@ -50,6 +52,7 @@ const WebcamCapture = () => {
     }
     setIsRecording(false);
     setFrameBuffer([]);
+    frameBufferRef.current = [];
     setIsVideoReady(false);
 
     if (videoRef.current) {
@@ -118,22 +121,27 @@ const WebcamCapture = () => {
     }
   };
 
-  const handlePredict = async (frames = frameBuffer) => {
-    if (!frames.length) {
+  const handlePredict = async (frames) => {
+    const toPredict = frames || frameBufferRef.current;
+    if (!toPredict.length) {
       setError('No frames captured');
       return;
     }
+
+    if (isPredictingRef.current) return;
+    isPredictingRef.current = true;
 
     setLoading(true);
     setError(null);
 
     try {
-      const prediction = await predictFrames(frames, 5);
+      const prediction = await predictFrames(toPredict, 5);
       setResult(prediction);
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Prediction failed');
     } finally {
       setLoading(false);
+      isPredictingRef.current = false;
     }
   };
 
@@ -149,24 +157,24 @@ const WebcamCapture = () => {
 
     setIsRecording(true);
     setFrameBuffer([]);
+    frameBufferRef.current = [];
+    isPredictingRef.current = false;
     setResult(null);
     setError(null);
 
     captureIntervalRef.current = setInterval(() => {
+      if (isPredictingRef.current) return;
+
       const frame = captureFrame();
       if (!frame) return;
 
-      setFrameBuffer((prev) => {
-        const next = [...prev, frame];
+      frameBufferRef.current.push(frame);
+      setFrameBuffer([...frameBufferRef.current]);
 
-        if (next.length >= bufferSize) {
-          // stop and predict with the full buffer
-          stopRecording();
-          handlePredict(next);
-        }
-
-        return next;
-      });
+      if (frameBufferRef.current.length >= bufferSize) {
+        stopRecording();
+        handlePredict(frameBufferRef.current);
+      }
     }, 33);
   };
 
@@ -270,7 +278,7 @@ const WebcamCapture = () => {
                 <button
                   onClick={() => {
                     stopRecording();
-                    handlePredict();
+                    handlePredict(frameBufferRef.current);
                   }}
                   className="btn-primary flex-1 rounded-xl"
                 >
