@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
-import { Video, Camera, Activity, Clock } from 'lucide-react';
+import { Video, Camera, Activity, Clock, BarChart3 } from 'lucide-react';
 import VideoUpload from './components/VideoUpload';
 import WebcamCapture from './components/WebcamCapture';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import HistoryPage from './pages/HistoryPage';
+import DashboardPage from './pages/DashboardPage';
 import { useAuth } from './context/AuthContext';
 import { healthCheck } from './services/api';
 
@@ -120,6 +121,13 @@ function App() {
                     <Clock className="w-4 h-4" />
                     History
                   </Link>
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center gap-2 px-3 py-4 text-sm font-medium border-b-2 border-transparent hover:border-primary-500 hover:text-primary-600 transition-colors"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Dashboard
+                  </Link>
                 </>
               )}
             </div>
@@ -165,6 +173,9 @@ function App() {
             } />
             <Route path="/history" element={
               <ProtectedRoute><HistoryPage /></ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute><DashboardPage /></ProtectedRoute>
             } />
           </Routes>
         </main>
