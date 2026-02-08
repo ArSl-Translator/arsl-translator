@@ -23,14 +23,30 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const pageSize = 200;
+  const pageSize = 100;
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getHistory(1, pageSize);
-      setHistory(data);
+      const firstPage = await getHistory(1, pageSize);
+      const total = firstPage.total ?? firstPage.items?.length ?? 0;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      let items = [...(firstPage.items || [])];
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const nextPage = await getHistory(page, pageSize);
+        if (!nextPage.items || nextPage.items.length === 0) {
+          break;
+        }
+        items = items.concat(nextPage.items);
+      }
+
+      setHistory({
+        ...firstPage,
+        total,
+        items,
+      });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load dashboard data');
     } finally {
@@ -121,7 +137,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="card">
+      <div className="rounded-2xl bg-white/70 backdrop-blur px-6 py-5">
         <div className="flex items-center gap-3 mb-2">
           <div className="bg-primary-500 text-white p-2 rounded-lg">
             <BarChart3 className="w-5 h-5" />
@@ -134,7 +150,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <p className="text-xs text-gray-400">
-          Showing last {pageSize} predictions.
+          Showing all predictions.
         </p>
       </div>
 
@@ -163,25 +179,25 @@ export default function DashboardPage() {
       {!loading && !error && history?.items?.length > 0 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="text-sm text-gray-500">Total Predictions</div>
               <div className="text-2xl font-bold text-gray-900 mt-1">
                 {totalCount}
               </div>
             </div>
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="text-sm text-gray-500">Video Predictions</div>
               <div className="text-2xl font-bold text-gray-900 mt-1">
                 {videoCount}
               </div>
             </div>
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="text-sm text-gray-500">Webcam Predictions</div>
               <div className="text-2xl font-bold text-gray-900 mt-1">
                 {webcamCount}
               </div>
             </div>
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="text-sm text-gray-500">Avg Confidence</div>
               <div className="text-2xl font-bold text-gray-900 mt-1">
                 {avgConfidence != null
@@ -192,7 +208,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-4 h-4 text-gray-500" />
                 <h3 className="text-lg font-semibold text-gray-800">
@@ -218,7 +234,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="card">
+            <div className="rounded-2xl bg-white/70 px-5 py-4">
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-4 h-4 text-gray-500" />
                 <h3 className="text-lg font-semibold text-gray-800">
@@ -244,7 +260,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="card">
+          <div className="rounded-2xl bg-white/70 px-5 py-4">
             <div className="flex items-center gap-2 mb-4">
               <Video className="w-4 h-4 text-gray-500" />
               <Camera className="w-4 h-4 text-gray-500" />
