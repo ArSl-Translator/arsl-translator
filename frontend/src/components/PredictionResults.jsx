@@ -1,7 +1,65 @@
-import React from 'react';
-import { Trophy, TrendingUp } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Trophy, TrendingUp, Volume2, VolumeX } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Current audio instance so we can stop previous playback
+let currentAudio = null;
+
+/**
+ * Play the pre-recorded audio file for a given label ID.
+ * Files are served from: GET {API_BASE}/audio/{label_id}.mp3
+ */
+const playAudio = (labelId) => {
+  if (!labelId) return;
+
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+
+  const audio = new Audio(`${API_BASE}/audio/${labelId}.wav`);
+  currentAudio = audio;
+  audio.play().catch(() => {
+    // Audio file doesn't exist yet for this label – silently ignore
+    currentAudio = null;
+  });
+};
+
+const stopAudio = () => {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+};
 
 const PredictionResults = ({ result, loading = false }) => {
+  const [muted, setMuted] = useState(() => {
+    try { return localStorage.getItem('arsl_speech_muted') === 'true'; } catch { return false; }
+  });
+  const prevResultRef = useRef(null);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('arsl_speech_muted', String(next)); } catch {}
+      if (next) stopAudio();
+      return next;
+    });
+  }, []);
+
+  // Auto-play audio for the top prediction whenever a new result arrives
+  useEffect(() => {
+    if (!result || result === prevResultRef.current) return;
+    prevResultRef.current = result;
+
+    if (!muted && result.top_prediction?.label_id) {
+      playAudio(result.top_prediction.label_id);
+    }
+  }, [result, muted]);
+
   if (loading) {
     return (
       <div className="card">
@@ -37,6 +95,24 @@ const PredictionResults = ({ result, loading = false }) => {
                 <span className="text-sm text-gray-500">Label ID: {top_prediction.label_id}</span>
               </div>
             </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => playAudio(top_prediction.label_id)}
+                className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"
+                title="Play pronunciation"
+              >
+                <Volume2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={toggleMute}
+                className={`p-2 rounded-lg transition-colors ${
+                  muted ? 'text-red-400 hover:bg-red-50' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+                title={muted ? 'Unmute auto-play' : 'Mute auto-play'}
+              >
+                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-4 h-4 opacity-50" />}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -62,15 +138,24 @@ const PredictionResults = ({ result, loading = false }) => {
                     <p className="text-xs text-gray-500">Label ID: {pred.label_id}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-primary-600">
-                    {(pred.confidence * 100).toFixed(1)}%
-                  </p>
-                  <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                    <div
-                      className="bg-primary-500 h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${pred.confidence * 100}%` }}
-                    />
+                <div className="text-right flex items-center gap-3">
+                  <button
+                    onClick={() => playAudio(pred.label_id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
+                    title="Play pronunciation"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                  <div>
+                    <p className="font-semibold text-primary-600">
+                      {(pred.confidence * 100).toFixed(1)}%
+                    </p>
+                    <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div
+                        className="bg-primary-500 h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: `${pred.confidence * 100}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

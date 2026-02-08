@@ -4,7 +4,7 @@ WORKDIR /app
 
 # system deps (opencv runtime needs these sometimes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libsm6 libxext6 libpq-dev \
+    ffmpeg libsm6 libxext6 libpq-dev espeak-ng \
   && rm -rf /var/lib/apt/lists/*
 
 # Layer 1: heavy, rarely-changing deps (torch, opencv, numpy, etc.)

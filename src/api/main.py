@@ -7,11 +7,13 @@ from typing import List, Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.api.inference import ModelInference
 from src.api.auth.router import router as auth_router
+from src.utils.generate_audio import generate_all_audio
 from src.api.database.init_db import create_tables
 from src.api.database.connection import get_db
 from src.api.auth.dependencies import get_current_user
@@ -36,6 +38,11 @@ app.add_middleware(
 
 app.include_router(auth_router)
 
+# Serve pre-recorded audio files for sign label pronunciation
+_audio_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "audio")
+os.makedirs(_audio_dir, exist_ok=True)
+app.mount("/audio", StaticFiles(directory=_audio_dir), name="audio")
+
 # Global model instance (loaded on startup)
 model_inference: Optional[ModelInference] = None
 
@@ -50,6 +57,12 @@ def startup():
         create_tables()
     except Exception as e:
         print(f"Warning: Could not create database tables: {e}")
+
+    # Generate pronunciation audio files (skips any that already exist)
+    try:
+        generate_all_audio()
+    except Exception as e:
+        print(f"Warning: Audio generation failed: {e}")
 
     # Get model path from environment or use default
     model_path = os.environ.get(
