@@ -181,7 +181,7 @@ arsl-translator/
 ├── mlruns/                           # MLflow experiment data
 │
 ├── docker-compose.yml                # Defines all services (postgres, api, mlflow, frontend)
-├── Dockerfile                        # Python API container image (includes espeak-ng)
+├── Dockerfile                        # Python API container image
 ├── requirements.base.txt             # Heavy deps (torch, opencv) — cached Docker layer
 └── requirements.txt                  # Lighter deps (fastapi, auth libs)
 ```
@@ -283,7 +283,7 @@ This starts 4 containers:
 | Service | Port | Description |
 |---------|------|-------------|
 | `arsl_frontend` | 3000 | React web app |
-| `arsl_api` | 8000 | FastAPI backend (also generates pronunciation audio on first start) |
+| `arsl_api` | 8000 | FastAPI backend |
 | `arsl_mlflow` | 5000 | MLflow experiment tracker |
 | `arsl_postgres` | 5432 | PostgreSQL database |
 
