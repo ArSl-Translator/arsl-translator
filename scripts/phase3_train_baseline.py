@@ -1,6 +1,6 @@
 import os
 import argparse
-import json
+import contextlib
 import pandas as pd
 
 import torch
@@ -13,7 +13,7 @@ import mlflow
 
 from src.models.baseline_resnet_lstm import ResNetLSTMClassifier
 from src.train.dataset import KArSLFramesDataset
-from src.train.trainer import TrainConfig, train_one_epoch, evaluate
+from src.train.trainer import train_one_epoch, evaluate
 from src.utils.io import ensure_dir
 
 
@@ -36,17 +36,47 @@ def parse_args():
     p.add_argument("--artifact_dir", default="./artifacts/models")
     p.add_argument("--experiment", default="karsl_baseline")
     p.add_argument("--run_name", default="resnet18_bilstm")
+    p.add_argument(
+        "--resume",
+        default=None,
+        help="Path to a training checkpoint (.pt) from a previous run to continue. "
+        "Saves each epoch to baseline_resnet18_bilstm_last.pt — use that file after an interrupt.",
+    )
+    p.add_argument(
+        "--no_mlflow",
+        action="store_true",
+        help="Disable MLflow (offline / no tracking server). Training and checkpoints still run.",
+    )
 
     return p.parse_args()
+
+
+def _mlflow_call(fn, desc: str, args_ns):
+    if args_ns.no_mlflow:
+        return None
+    try:
+        return fn()
+    except Exception as e:
+        print(f"Warning: MLflow {desc} skipped: {e}")
+        return None
+
+
+def _load_checkpoint(path: str, map_location):
+    """Load full training checkpoint (model + optimizer); PyTorch 2.6+ needs weights_only=False."""
+    try:
+        return torch.load(path, map_location=map_location, weights_only=False)
+    except TypeError:
+        return torch.load(path, map_location=map_location)
 
 
 def main():
     args = parse_args()
     torch.manual_seed(args.seed)
 
-    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
-    mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment(args.experiment)
+    if not args.no_mlflow:
+        tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000")
+        _mlflow_call(lambda: mlflow.set_tracking_uri(tracking_uri), "set_tracking_uri", args)
+        _mlflow_call(lambda: mlflow.set_experiment(args.experiment), "set_experiment", args)
 
     df = pd.read_csv(args.index_csv)
 
@@ -91,16 +121,46 @@ def main():
     val_loader   = DataLoader(val_ds,   batch_size=args.batch_size, shuffle=False, num_workers=2, pin_memory=(device=="cuda"))
     test_loader  = DataLoader(test_ds,  batch_size=args.batch_size, shuffle=False, num_workers=2, pin_memory=(device=="cuda"))
 
-    model = ResNetLSTMClassifier(num_classes=502, backbone="resnet18", pretrained=True).to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
     ensure_dir(args.artifact_dir)
     best_path = os.path.join(args.artifact_dir, "baseline_resnet18_bilstm_best.pt")
+    last_path = os.path.join(args.artifact_dir, "baseline_resnet18_bilstm_last.pt")
 
-    with mlflow.start_run(run_name=args.run_name):
+    resume_from = args.resume
+    if resume_from and not os.path.isfile(resume_from):
+        raise FileNotFoundError(f"Resume checkpoint not found: {resume_from}")
+
+    if resume_from:
+        print(f"Resuming from checkpoint: {resume_from}")
+        model = ResNetLSTMClassifier(num_classes=502, backbone="resnet18", pretrained=False).to(device)
+        ckpt = _load_checkpoint(resume_from, device)
+        model.load_state_dict(ckpt["model_state_dict"])
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        if "optimizer_state_dict" in ckpt:
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        start_epoch = int(ckpt["epoch"]) + 1
+        best_val_top1 = float(ckpt.get("best_val_top1", -1.0))
+        if start_epoch > args.epochs:
+            print(f"Checkpoint already completed epoch {ckpt['epoch']}; nothing to do (requested --epochs {args.epochs}).")
+            return
+        print(f"Continuing from epoch {start_epoch} (best val top1 so far: {best_val_top1:.4f})")
+    else:
+        model = ResNetLSTMClassifier(num_classes=502, backbone="resnet18", pretrained=True).to(device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        start_epoch = 1
+        best_val_top1 = -1.0
+
+    run_cm = contextlib.nullcontext()
+    if not args.no_mlflow:
+        try:
+            run_cm = mlflow.start_run(run_name=args.run_name)
+        except Exception as e:
+            print(f"Warning: MLflow start_run failed ({e}); continuing without MLflow.")
+
+    with run_cm:
         # Log params
-        mlflow.log_params({
+        params = {
             "num_frames": args.num_frames,
             "img_size": args.img_size,
             "epochs": args.epochs,
@@ -114,22 +174,32 @@ def main():
             "train_samples": len(train_df),
             "val_samples": len(val_df),
             "test_samples": len(df_test),
-        })
+            "resume": resume_from or "",
+            "start_epoch": start_epoch,
+        }
+        if not args.no_mlflow:
+            _mlflow_call(lambda: mlflow.log_params(params), "log_params", args)
 
-        best_val_top1 = -1.0
-
-        for epoch in range(1, args.epochs + 1):
+        for epoch in range(start_epoch, args.epochs + 1):
             tr = train_one_epoch(model, train_loader, optimizer, criterion, device)
             va = evaluate(model, val_loader, criterion, device, desc="val")
 
-            mlflow.log_metrics({
-                "train_loss": tr["loss"],
-                "train_top1": tr["top1"],
-                "train_top5": tr["top5"],
-                "val_loss": va["loss"],
-                "val_top1": va["top1"],
-                "val_top5": va["top5"],
-            }, step=epoch)
+            if not args.no_mlflow:
+                _mlflow_call(
+                    lambda: mlflow.log_metrics(
+                        {
+                            "train_loss": tr["loss"],
+                            "train_top1": tr["top1"],
+                            "train_top5": tr["top5"],
+                            "val_loss": va["loss"],
+                            "val_top1": va["top1"],
+                            "val_top5": va["top5"],
+                        },
+                        step=epoch,
+                    ),
+                    "log_metrics",
+                    args,
+                )
 
             print(f"Epoch {epoch:02d} | "
                   f"train top1={tr['top1']:.4f} top5={tr['top5']:.4f} loss={tr['loss']:.4f} | "
@@ -144,31 +214,55 @@ def main():
                     "args": vars(args),
                 }, best_path)
 
+            # Full training state every epoch (resume / crash recovery)
+            torch.save({
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "epoch": epoch,
+                "best_val_top1": best_val_top1,
+                "args": vars(args),
+            }, last_path)
+
         # Final test evaluation using best checkpoint
-        ckpt = torch.load(best_path, map_location=device)
+        if not os.path.isfile(best_path):
+            raise RuntimeError(
+                "No best checkpoint was written (empty training?). "
+                f"Expected at: {best_path}"
+            )
+        ckpt = _load_checkpoint(best_path, device)
         model.load_state_dict(ckpt["model_state_dict"])
 
         te = evaluate(model, test_loader, criterion, device, desc="test")
-        mlflow.log_metrics({
-            "test_loss": te["loss"],
-            "test_top1": te["top1"],
-            "test_top5": te["top5"],
-        })
-
-        # Log checkpoint file as artifact
-        mlflow.log_artifact(best_path, artifact_path="models")
-
-        # Log model to MLflow in pytorch format
-        mlflow.pytorch.log_model(
-            pytorch_model=model,
-            artifact_path="pytorch_model",
-            registered_model_name="karsl_baseline_resnet18_bilstm"
-        )
+        if not args.no_mlflow:
+            _mlflow_call(
+                lambda: mlflow.log_metrics(
+                    {
+                        "test_loss": te["loss"],
+                        "test_top1": te["top1"],
+                        "test_top5": te["top5"],
+                    }
+                ),
+                "log_metrics test",
+                args,
+            )
+            _mlflow_call(lambda: mlflow.log_artifact(best_path, artifact_path="models"), "log_artifact", args)
+            _mlflow_call(
+                lambda: mlflow.pytorch.log_model(
+                    pytorch_model=model,
+                    artifact_path="pytorch_model",
+                    registered_model_name="karsl_baseline_resnet18_bilstm",
+                ),
+                "log_model",
+                args,
+            )
 
         print("\n✅ Best model saved:", best_path)
-        print(f"✅ Model registered in MLflow Model Registry as 'karsl_baseline_resnet18_bilstm'")
+        print(f"✅ Last training state (resume): {last_path}")
+        if not args.no_mlflow:
+            print("✅ Model registered in MLflow Model Registry as 'karsl_baseline_resnet18_bilstm' (if server allowed)")
         print(f"✅ Test results: top1={te['top1']:.4f}, top5={te['top5']:.4f}, loss={te['loss']:.4f}")
-        print(f"✅ MLflow: {os.environ.get('MLFLOW_TRACKING_URI', 'http://localhost:5000')}")
+        if not args.no_mlflow:
+            print(f"✅ MLflow: {os.environ.get('MLFLOW_TRACKING_URI', 'http://localhost:5000')}")
 
 if __name__ == "__main__":
     main()
