@@ -5,7 +5,10 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-LABEL_RE = re.compile(r"_(\d{4})_")  # finds _0001_ in folder name like 01_01_0001_(...)
+# Original KArSL layout: nested folders with label embedded, e.g. ..._0001_...
+LABEL_RE = re.compile(r"_(\d{4})_")
+# Flat layout (e.g. Kaggle): sample folder is exactly 4 digits, e.g. 0001 / 0065 / 0502
+FOLDER_LABEL_4DIGIT = re.compile(r"^(\d{4})$")
 
 def is_image_file(name: str) -> bool:
     n = name.lower()
@@ -13,26 +16,64 @@ def is_image_file(name: str) -> bool:
 
 @dataclass
 class IndexConfig:
-    dataset_root: str                 # path to folder containing 01,02,03
+    dataset_root: str                 # path to folder containing signer dirs (01, 02, ...)
     output_csv: str                   # where to save data_index.csv
-    signers: Tuple[str, ...] = ("01", "02", "03")
+    signers: Optional[Tuple[str, ...]] = None  # None = auto-discover subdirs that have train/ or test/
     splits: Tuple[str, ...] = ("train", "test")
+
+
+def discover_signers(dataset_root: str) -> Tuple[str, ...]:
+    """
+    Top-level folders under dataset_root that contain train/ and/or test/ (e.g. 01 only, or 01..03).
+    Skips hidden dirs like .git or __MACOSX.
+    """
+    if not os.path.isdir(dataset_root):
+        return ()
+    found: List[str] = []
+    for name in sorted(os.listdir(dataset_root)):
+        path = os.path.join(dataset_root, name)
+        if not os.path.isdir(path):
+            continue
+        if name.startswith(".") or name.startswith("__"):
+            continue
+        train_p = os.path.join(path, "train")
+        test_p = os.path.join(path, "test")
+        if os.path.isdir(train_p) or os.path.isdir(test_p):
+            found.append(name)
+    return tuple(found)
+
 
 def extract_label_id_from_folder(folder_name: str) -> Optional[Tuple[int, str]]:
     """
-    Returns (label_id_int, label_id_str) e.g. (65, "0065")
+    Returns (label_id_int, label_id_str) e.g. (65, "0065").
+
+    Supports:
+    - Legacy: substring like _0001_ inside folder name
+    - Flat Kaggle-style: folder name is exactly four digits (0001..0502)
     """
     m = LABEL_RE.search(folder_name)
-    if not m:
-        return None
-    label_str = m.group(1)
-    return int(label_str), label_str
+    if m:
+        label_str = m.group(1)
+        return int(label_str), label_str
+    m2 = FOLDER_LABEL_4DIGIT.match(folder_name)
+    if m2:
+        label_str = m2.group(1)
+        return int(label_str), label_str
+    return None
 
 def build_data_index(cfg: IndexConfig) -> pd.DataFrame:
     rows: List[Dict] = []
     sample_id = 0
 
-    for signer in cfg.signers:
+    signers = cfg.signers
+    if signers is None:
+        signers = discover_signers(cfg.dataset_root)
+        print(f"[INFO] Auto-discovered signer folders: {signers}")
+    if not signers:
+        print("[ERROR] No signer folders found (expected subdirs with train/ or test/).")
+        return pd.DataFrame()
+
+    for signer in signers:
         for split in cfg.splits:
             split_root = os.path.join(cfg.dataset_root, signer, split)
             if not os.path.isdir(split_root):
@@ -83,13 +124,14 @@ def summarize_and_validate(df: pd.DataFrame) -> None:
     print("\nBy signer:")
     print(df.groupby("signer").size())
 
-    # Expected total if dataset is complete:
-    expected_total = 502 * 3 * 50  # 75,300
+    # Expected total if dataset is complete (502 classes × 50 reps × N signers)
+    n_signers = df["signer"].nunique()
+    expected_total = 502 * n_signers * 50
     if len(df) != expected_total:
-        print(f"\n[WARN] Total samples != expected ({expected_total}).")
+        print(f"\n[WARN] Total samples != expected ({expected_total} for {n_signers} signer(s)).")
         print("Possible causes: incomplete extraction, missing folders, or naming mismatch.")
     else:
-        print("\n[OK] Total samples match expected 75,300.")
+        print(f"\n[OK] Total samples match expected {expected_total} ({n_signers} signer(s)).")
 
     # Label range check
     bad = df[(df["label_id"] < 1) | (df["label_id"] > 502)]

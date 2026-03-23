@@ -24,6 +24,7 @@ data/**/*
 !data/**/.gitkeep
 artifacts/
 outputs/
+models/*.pt
 
 # If you want to keep empty folders tracked:
 !artifacts/.gitkeep

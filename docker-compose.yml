@@ -27,9 +27,13 @@ services:
       - JWT_SECRET_KEY=change-me-in-production-use-openssl-rand
       - JWT_ALGORITHM=HS256
       - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+      # Trained weights: use baseline_resnet18_bilstm_best.pt (best val) or
+      # baseline_resnet18_bilstm_last.pt (latest epoch; from resume-aware training)
+      - MODEL_PATH=/app/models/baseline_resnet18_bilstm_last.pt
     volumes:
       - ./data:/app/data              # Mount data directory for access
       - ./artifacts:/app/artifacts    # Mount artifacts directory
+      - ./models:/app/models          # Preferred location for checkpoints you choose for inference
       - ./outputs:/app/outputs        # Mount outputs directory
       - ./src:/app/src                # Mount source code for hot reload
       - ./scripts:/app/scripts        # Mount scripts for development

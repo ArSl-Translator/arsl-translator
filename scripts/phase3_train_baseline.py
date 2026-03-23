@@ -82,9 +82,8 @@ def main():
 
     # Optional: filter by signer
     if args.use_signer != "all":
-        # Convert signer to int for comparison (handles both "01" and "1" inputs)
         signer_int = int(args.use_signer)
-        df = df[df["signer"] == signer_int].copy()
+        df = df[pd.to_numeric(df["signer"], errors="coerce") == signer_int].copy()
 
     # Keep train/test as provided by dataset
     df_train = df[df["split"] == "train"].copy()

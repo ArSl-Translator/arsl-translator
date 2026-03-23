@@ -3,7 +3,7 @@ import tempfile
 import base64
 import numpy as np
 import cv2
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,6 +47,34 @@ app.mount("/audio", StaticFiles(directory=_audio_dir), name="audio")
 model_inference: Optional[ModelInference] = None
 
 
+def resolve_model_path() -> Optional[str]:
+    """
+    Pick a checkpoint for inference: MODEL_PATH if set, else try best.pt, then last.pt
+    (last.pt is written every epoch — use when training stopped before best.pt updated).
+    """
+    candidates: List[str] = []
+    env_path = os.environ.get("MODEL_PATH")
+    if env_path:
+        candidates.append(env_path)
+    candidates.extend(
+        [
+            "./models/baseline_resnet18_bilstm_best.pt",
+            "./models/baseline_resnet18_bilstm_last.pt",
+            "./artifacts/models/baseline_resnet18_bilstm_best.pt",
+            "./artifacts/models/baseline_resnet18_bilstm_last.pt",
+        ]
+    )
+    seen: Set[str] = set()
+    for p in candidates:
+        key = os.path.normpath(os.path.abspath(p))
+        if key in seen:
+            continue
+        seen.add(key)
+        if os.path.isfile(p):
+            return p
+    return None
+
+
 @app.on_event("startup")
 def startup():
     """Initialize database and load model on API startup."""
@@ -64,16 +92,15 @@ def startup():
     except Exception as e:
         print(f"Warning: Audio generation failed: {e}")
 
-    # Get model path from environment or use default
-    model_path = os.environ.get(
-        "MODEL_PATH",
-        "./artifacts/models/baseline_resnet18_bilstm_best.pt"
-    )
-
-    if not os.path.exists(model_path):
-        print(f"Warning: Model not found at {model_path}")
-        print("   API will start but predictions will fail until model is trained.")
+    model_path = resolve_model_path()
+    if not model_path:
+        print("Warning: No checkpoint found. Tried MODEL_PATH, then models/ and artifacts/")
+        print("   (baseline_resnet18_bilstm_best.pt and baseline_resnet18_bilstm_last.pt)")
+        print("   API will start but predictions will fail until a .pt file is available.")
         return
+
+    if os.environ.get("MODEL_PATH") and not os.path.isfile(os.environ["MODEL_PATH"]):
+        print(f"Note: MODEL_PATH ({os.environ['MODEL_PATH']}) missing — using {model_path}")
 
     try:
         model_inference = ModelInference(model_path=model_path)

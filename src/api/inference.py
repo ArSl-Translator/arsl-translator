@@ -46,7 +46,12 @@ class ModelInference:
 
     def _load_model(self, model_path: str) -> torch.nn.Module:
         """Load the trained model from checkpoint."""
-        checkpoint = torch.load(model_path, map_location=self.device)
+        try:
+            checkpoint = torch.load(
+                model_path, map_location=self.device, weights_only=False
+            )
+        except TypeError:
+            checkpoint = torch.load(model_path, map_location=self.device)
 
         # Create model instance
         model = ResNetLSTMClassifier(num_classes=502, backbone="resnet18", pretrained=False)
