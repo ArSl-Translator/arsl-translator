@@ -22,9 +22,26 @@ class IndexConfig:
     splits: Tuple[str, ...] = ("train", "test")
 
 
+def resolve_signer_content_root(dataset_root: str, signer: str) -> Optional[str]:
+    """
+    Directory that contains train/ and test/ for this signer.
+
+    Prefer DATASET_ROOT/<signer>/train|test; if missing, use DATASET_ROOT/<signer>/<signer>/train|test.
+    """
+    flat = os.path.join(dataset_root, signer)
+    nested = os.path.join(dataset_root, signer, signer)
+    flat_ok = os.path.isdir(os.path.join(flat, "train")) or os.path.isdir(os.path.join(flat, "test"))
+    nested_ok = os.path.isdir(os.path.join(nested, "train")) or os.path.isdir(os.path.join(nested, "test"))
+    if flat_ok:
+        return flat
+    if nested_ok:
+        return nested
+    return None
+
+
 def discover_signers(dataset_root: str) -> Tuple[str, ...]:
     """
-    Top-level folders under dataset_root that contain train/ and/or test/ (e.g. 01 only, or 01..03).
+    Top-level folders under dataset_root that have train/ or test/ (flat or nested signer folder).
     Skips hidden dirs like .git or __MACOSX.
     """
     if not os.path.isdir(dataset_root):
@@ -36,9 +53,7 @@ def discover_signers(dataset_root: str) -> Tuple[str, ...]:
             continue
         if name.startswith(".") or name.startswith("__"):
             continue
-        train_p = os.path.join(path, "train")
-        test_p = os.path.join(path, "test")
-        if os.path.isdir(train_p) or os.path.isdir(test_p):
+        if resolve_signer_content_root(dataset_root, name) is not None:
             found.append(name)
     return tuple(found)
 
@@ -74,8 +89,21 @@ def build_data_index(cfg: IndexConfig) -> pd.DataFrame:
         return pd.DataFrame()
 
     for signer in signers:
+        signer_root = resolve_signer_content_root(cfg.dataset_root, signer)
+        if signer_root is None:
+            print(
+                f"[WARN] No train/ or test/ under {cfg.dataset_root}/{signer}/ "
+                f"or {cfg.dataset_root}/{signer}/{signer}/ — skipping signer {signer}"
+            )
+            continue
+        if os.path.normpath(signer_root) == os.path.normpath(os.path.join(cfg.dataset_root, signer)):
+            layout = "flat"
+        else:
+            layout = "nested"
+        print(f"[INFO] Signer {signer}: using {layout} layout → {signer_root}")
+
         for split in cfg.splits:
-            split_root = os.path.join(cfg.dataset_root, signer, split)
+            split_root = os.path.join(signer_root, split)
             if not os.path.isdir(split_root):
                 print(f"[WARN] Missing folder: {split_root}")
                 continue
