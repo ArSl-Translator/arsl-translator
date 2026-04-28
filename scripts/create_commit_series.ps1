@@ -69,10 +69,6 @@ $commits = @(
         Paths = @("requirements.base.txt")
     },
     @{
-        Message = "build: configure Docker image for MediaPipe pose serving"
-        Paths = @(".dockerignore", "Dockerfile", "docker-compose.yml")
-    },
-    @{
         Message = "feat(api): add ArabSign pose inference adapter"
         Paths = @("src/api/arabsign_inference.py")
     },
