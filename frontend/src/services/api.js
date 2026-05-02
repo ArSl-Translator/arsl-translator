@@ -32,11 +32,11 @@ export const healthCheck = async () => {
   return response.data;
 };
 
-export const predictVideo = async (file, topK = 5) => {
+export const predictVideo = async (file, topK = 5, model = 'karsl') => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await api.post(`/predict/video?top_k=${topK}`, formData, {
+  const response = await api.post(`/predict/video?top_k=${topK}&model=${model}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -45,10 +45,11 @@ export const predictVideo = async (file, topK = 5) => {
   return response.data;
 };
 
-export const predictFrames = async (frames, topK = 5) => {
+export const predictFrames = async (frames, topK = 5, model = 'karsl') => {
   const response = await api.post('/predict/frames', {
     frames,
     top_k: topK,
+    model,
   });
 
   return response.data;
