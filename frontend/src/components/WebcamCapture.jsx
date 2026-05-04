@@ -13,6 +13,7 @@ const WebcamCapture = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [model, setModel] = useState(() => localStorage.getItem('arsl_selected_model') || 'karsl');
 
   const [webcamError, setWebcamError] = useState(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -135,7 +136,7 @@ const WebcamCapture = () => {
     setError(null);
 
     try {
-      const prediction = await predictFrames(toPredict, 5);
+      const prediction = await predictFrames(toPredict, 5, model);
       setResult(prediction);
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Prediction failed');
@@ -191,6 +192,26 @@ const WebcamCapture = () => {
         <p className="text-gray-500 mb-6">
           Capture video from your webcam and get real-time sign language predictions.
         </p>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            Model
+          </label>
+          <select
+            value={model}
+            onChange={(e) => {
+              setModel(e.target.value);
+              localStorage.setItem('arsl_selected_model', e.target.value);
+              setResult(null);
+              setError(null);
+            }}
+            disabled={isRecording || loading}
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+          >
+            <option value="karsl">KArSL baseline classifier</option>
+            <option value="arabsign">ArabSign pose translator</option>
+          </select>
+        </div>
 
         <div className="relative bg-gray-900 rounded-2xl overflow-hidden mb-4">
           {!stream ? (
