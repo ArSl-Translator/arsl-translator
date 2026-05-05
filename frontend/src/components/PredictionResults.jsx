@@ -35,6 +35,8 @@ const stopAudio = () => {
   }
 };
 
+const canPlayAudio = (prediction) => /^\d+$/.test(String(prediction?.label_id || ''));
+
 const PredictionResults = ({ result, loading = false }) => {
   const [muted, setMuted] = useState(() => {
     try { return localStorage.getItem('arsl_speech_muted') === 'true'; } catch { return false; }
@@ -55,7 +57,7 @@ const PredictionResults = ({ result, loading = false }) => {
     if (!result || result === prevResultRef.current) return;
     prevResultRef.current = result;
 
-    if (!muted && result.top_prediction?.label_id) {
+    if (!muted && canPlayAudio(result.top_prediction)) {
       playAudio(result.top_prediction.label_id);
     }
   }, [result, muted]);
@@ -95,24 +97,31 @@ const PredictionResults = ({ result, loading = false }) => {
                 <span className="text-sm text-gray-500">Label ID: {top_prediction.label_id}</span>
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => playAudio(top_prediction.label_id)}
-                className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"
-                title="Play pronunciation"
-              >
-                <Volume2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={toggleMute}
-                className={`p-2 rounded-lg transition-colors ${
-                  muted ? 'text-red-400 hover:bg-red-50' : 'text-gray-400 hover:bg-gray-100'
-                }`}
-                title={muted ? 'Unmute auto-play' : 'Mute auto-play'}
-              >
-                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-4 h-4 opacity-50" />}
-              </button>
-            </div>
+            {canPlayAudio(top_prediction) && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={() => playAudio(top_prediction.label_id)}
+                  className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"
+                  title="Play pronunciation"
+                >
+                  <Volume2 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={toggleMute}
+                  className={`p-2 rounded-lg transition-colors ${
+                    muted ? 'text-red-400 hover:bg-red-50' : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                  title={muted ? 'Unmute auto-play' : 'Mute auto-play'}
+                >
+                  {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-4 h-4 opacity-50" />}
+                </button>
+              </div>
+            )}
+            {!canPlayAudio(top_prediction) && (
+              <div className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-medium text-gray-500">
+                Text output
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -139,13 +148,15 @@ const PredictionResults = ({ result, loading = false }) => {
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">
-                  <button
-                    onClick={() => playAudio(pred.label_id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
-                    title="Play pronunciation"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </button>
+                  {canPlayAudio(pred) && (
+                    <button
+                      onClick={() => playAudio(pred.label_id)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-colors"
+                      title="Play pronunciation"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <div>
                     <p className="font-semibold text-primary-600">
                       {(pred.confidence * 100).toFixed(1)}%
