@@ -19,7 +19,7 @@ def save_prediction(
     top = result.get("top_prediction") or {}
     record = PredictionHistory(
         user_id=user.id,
-        prediction_type=prediction_type,
+        prediction_type=prediction_type[:64],
         top_prediction_label=str(top.get("label_id", "")),
         top_prediction_text=top.get("text", ""),
         top_prediction_confidence=top.get("confidence"),

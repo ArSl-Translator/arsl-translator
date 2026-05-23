@@ -15,7 +15,7 @@ class PredictionHistory(Base):
         nullable=False,
         index=True,
     )
-    prediction_type = Column(String(20), nullable=False)
+    prediction_type = Column(String(64), nullable=False)
     top_prediction_label = Column(String(20))
     top_prediction_text = Column(String(255))
     top_prediction_confidence = Column(Float)
