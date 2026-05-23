@@ -49,7 +49,7 @@ function StatusPill({ apiStatus }) {
 function AppShell({ user, apiStatus, authLoading }) {
   return (
     <div className="min-h-screen bg-[#f7f8fb]">
-      <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
+      <div className={`min-h-screen ${user ? 'lg:grid lg:grid-cols-[280px_1fr]' : ''}`}>
         {user && (
           <aside className="hidden min-h-screen flex-col border-r border-gray-200 bg-[#f1f3f7] px-4 py-5 lg:flex">
             <Link to="/upload" className="flex items-center gap-3 px-2">
@@ -84,6 +84,7 @@ function AppShell({ user, apiStatus, authLoading }) {
         )}
 
         <div className="min-w-0">
+          {user && (
           <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
             <div className="px-4 py-3 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between gap-4">
@@ -129,8 +130,9 @@ function AppShell({ user, apiStatus, authLoading }) {
               )}
             </div>
           </header>
+          )}
 
-          <main className="px-4 py-6 sm:px-6 lg:px-8">
+          <main className={user ? 'px-4 py-6 sm:px-6 lg:px-8' : 'flex min-h-screen items-center justify-center px-4 py-8'}>
             <Routes>
               <Route path="/" element={<ProtectedRoute><Navigate to="/upload" replace /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><VideoUpload /></ProtectedRoute>} />
