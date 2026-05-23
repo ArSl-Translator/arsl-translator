@@ -4,8 +4,12 @@ WORKDIR /app
 
 # system deps (opencv runtime needs these sometimes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg libsm6 libxext6 libpq-dev espeak-ng \
+    ffmpeg libsm6 libxext6 libpq-dev espeak-ng wget \
   && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /app/mediapipe_models \
+  && wget -q -O /app/mediapipe_models/pose_landmarker_full.task \
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task"
 
 # Layer 1: heavy, rarely-changing deps (torch, opencv, numpy, etc.)
 # This layer is cached and won't re-download when you only change requirements.txt

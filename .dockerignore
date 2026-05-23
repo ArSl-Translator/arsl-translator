@@ -21,6 +21,7 @@ Thumbs.db
 data/
 artifacts/
 outputs/
+models/*.pt
 
 # ---- Logs ----
 *.log

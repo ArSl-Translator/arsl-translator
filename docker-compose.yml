@@ -30,6 +30,8 @@ services:
       # Trained weights: use baseline_resnet18_bilstm_best.pt (best val) or
       # baseline_resnet18_bilstm_last.pt (latest epoch; from resume-aware training)
       - MODEL_PATH=/app/models/baseline_resnet18_bilstm_last.pt
+      - ARABSIGN_MODEL_PATH=/app/models/arabsign_best_model.pt
+      - MEDIAPIPE_MODEL_PATH=/app/mediapipe_models/pose_landmarker_full.task
     volumes:
       - ./data:/app/data              # Mount data directory for access
       - ./artifacts:/app/artifacts    # Mount artifacts directory
