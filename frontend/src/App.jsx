@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
-import { Video, Camera, Activity, Clock, BarChart3 } from 'lucide-react';
+import { Video, Camera, Activity, Clock, BarChart3, Bluetooth } from 'lucide-react';
 import VideoUpload from './components/VideoUpload';
 import WebcamCapture from './components/WebcamCapture';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import HistoryPage from './pages/HistoryPage';
 import DashboardPage from './pages/DashboardPage';
+import OfflineChatPage from './pages/OfflineChatPage';
 import { useAuth } from './context/AuthContext';
 import { healthCheck } from './services/api';
 
@@ -122,6 +123,13 @@ function App() {
                     <BarChart3 className="w-4 h-4" />
                     Dashboard
                   </NavLink>
+                  <NavLink
+                    to="/offline-chat"
+                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  >
+                    <Bluetooth className="w-4 h-4" />
+                    Offline Chat
+                  </NavLink>
                 </>
               )}
             </div>
@@ -170,6 +178,9 @@ function App() {
             } />
             <Route path="/dashboard" element={
               <ProtectedRoute><DashboardPage /></ProtectedRoute>
+            } />
+            <Route path="/offline-chat" element={
+              <ProtectedRoute><OfflineChatPage /></ProtectedRoute>
             } />
           </Routes>
         </main>

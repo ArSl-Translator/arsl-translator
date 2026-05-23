@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">محادثة سهلة</string>
+    <string name="home_title">محادثة سهلة</string>
+    <string name="home_subtitle">محادثة بلوتوث بدون إنترنت للأشخاص الذين لا يستطيعون الكلام أو السمع بسهولة.</string>
+    <string name="role_assisted">أحتاج مساعدة</string>
+    <string name="role_assisted_desc">استضافة محادثة قريبة</string>
+    <string name="role_helper">أريد المساعدة</string>
+    <string name="role_helper_desc">الاتصال بشخص قريب</string>
+    <string name="messages">الرسائل</string>
+    <string name="waiting_for_connection">في انتظار الاتصال...</string>
+    <string name="connected_to">متصل بـ %1$s</string>
+    <string name="disconnected">غير متصل</string>
+    <string name="connection_lost">انقطع الاتصال</string>
+    <string name="find_device">البحث عن جهاز</string>
+    <string name="paired_devices">الأجهزة المقترنة</string>
+    <string name="available_devices">الأجهزة المتاحة</string>
+    <string name="scan">بحث</string>
+    <string name="stop_scan">إيقاف البحث</string>
+    <string name="no_devices">لم يتم العثور على أجهزة. قم بإقران الهاتفين من إعدادات البلوتوث ثم حاول مرة أخرى.</string>
+    <string name="no_conversations">لا توجد محادثات بعد. عندما يتصل بك شخص ستظهر محادثته هنا.</string>
+    <string name="your_device_ready">جهازك جاهز</string>
+    <string name="ready_desc">اترك هذه الشاشة مفتوحة حتى يستطيع شخص قريب الاتصال بك.</string>
+    <string name="type_message">اكتب رسالة...</string>
+    <string name="say_hello">لا توجد رسائل بعد. قل مرحباً.</string>
+    <string name="attach">إرفاق</string>
+    <string name="choose_image">صورة</string>
+    <string name="take_photo">كاميرا</string>
+    <string name="choose_video">فيديو</string>
+    <string name="record_audio">صوت</string>
+    <string name="choose_file">ملف</string>
+    <string name="cancel">إلغاء</string>
+    <string name="send">إرسال</string>
+    <string name="recording">جاري التسجيل...</string>
+    <string name="media_image">صورة</string>
+    <string name="media_audio">صوت</string>
+    <string name="media_video">فيديو</string>
+    <string name="media_file">ملف</string>
+    <string name="permissions_required">أذونات البلوتوث والوسائط والكاميرا والميكروفون مطلوبة للتجربة الكاملة.</string>
+</resources>

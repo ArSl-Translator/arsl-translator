@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Accessible Chat</string>
+    <string name="home_title">Accessible Chat</string>
+    <string name="home_subtitle">Offline Bluetooth chat for people who cannot speak or hear easily.</string>
+    <string name="role_assisted">I need assistance</string>
+    <string name="role_assisted_desc">Host a nearby chat session</string>
+    <string name="role_helper">I want to help</string>
+    <string name="role_helper_desc">Connect to someone nearby</string>
+    <string name="messages">Messages</string>
+    <string name="waiting_for_connection">Waiting for connection...</string>
+    <string name="connected_to">Connected to %1$s</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connection_lost">Connection lost</string>
+    <string name="find_device">Find a Device</string>
+    <string name="paired_devices">Paired devices</string>
+    <string name="available_devices">Available devices</string>
+    <string name="scan">Scan</string>
+    <string name="stop_scan">Stop scanning</string>
+    <string name="no_devices">No devices found. Pair the phones in Android Bluetooth settings, then try again.</string>
+    <string name="no_conversations">No conversations yet. When someone connects, their chat appears here.</string>
+    <string name="your_device_ready">Your device is ready</string>
+    <string name="ready_desc">Keep this screen open so a nearby helper can connect.</string>
+    <string name="type_message">Type a message...</string>
+    <string name="say_hello">No messages yet. Say hello.</string>
+    <string name="attach">Attach</string>
+    <string name="choose_image">Image</string>
+    <string name="take_photo">Camera</string>
+    <string name="choose_video">Video</string>
+    <string name="record_audio">Voice</string>
+    <string name="choose_file">File</string>
+    <string name="cancel">Cancel</string>
+    <string name="send">Send</string>
+    <string name="recording">Recording...</string>
+    <string name="media_image">Image</string>
+    <string name="media_audio">Audio</string>
+    <string name="media_video">Video</string>
+    <string name="media_file">File</string>
+    <string name="permissions_required">Bluetooth, media, camera, and microphone permissions are required for the full demo.</string>
+</resources>
