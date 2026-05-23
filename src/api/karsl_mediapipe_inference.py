@@ -3,11 +3,15 @@ import os
 from typing import Dict, List, Optional
 
 import cv2
-import mediapipe as mp
 import numpy as np
 import torch
 
 from src.models.landmark_lstm import LandmarkBiLSTMClassifier
+
+try:
+    from mediapipe import solutions as mp_solutions
+except (ImportError, AttributeError):
+    from mediapipe.python import solutions as mp_solutions
 
 
 POSE_POINTS = [
@@ -95,7 +99,7 @@ class KArSLMediaPipeInference:
         self.model.to(self.device)
         self.model.eval()
 
-        self.mp_holistic = mp.solutions.holistic
+        self.mp_holistic = mp_solutions.holistic
 
     def _load_checkpoint(self, model_path: str):
         try:
