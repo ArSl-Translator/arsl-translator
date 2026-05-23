@@ -1,6 +1,6 @@
 import json
 import os
-import importlib
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import cv2
@@ -9,10 +9,14 @@ import numpy as np
 
 from src.models.landmark_lstm import LandmarkBiLSTMClassifier
 
-try:
-    mp_holistic = importlib.import_module("mediapipe.solutions.holistic")
-except ImportError:
-    mp_holistic = importlib.import_module("mediapipe.python.solutions.holistic")
+MEDIAPIPE_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+    "pose_landmarker_full/float16/latest/pose_landmarker_full.task"
+)
+MEDIAPIPE_MODEL_PATH = os.getenv(
+    "MEDIAPIPE_MODEL_PATH",
+    "./mediapipe_models/pose_landmarker_full.task",
+)
 
 
 POSE_POINTS = [
@@ -100,7 +104,31 @@ class KArSLMediaPipeInference:
         self.model.to(self.device)
         self.model.eval()
 
-        self.mp_holistic = mp_holistic
+        self._warned_hand_fallback = False
+
+    def _get_pose_landmarker(self):
+        if not Path(MEDIAPIPE_MODEL_PATH).is_file():
+            raise FileNotFoundError(
+                f"MediaPipe pose model not found at {MEDIAPIPE_MODEL_PATH}. "
+                f"Download it from {MEDIAPIPE_MODEL_URL}"
+            )
+
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision as mp_vision
+        from mediapipe.tasks.python.vision.core.vision_task_running_mode import (
+            VisionTaskRunningMode,
+        )
+
+        options = mp_vision.PoseLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=MEDIAPIPE_MODEL_PATH),
+            running_mode=VisionTaskRunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.4,
+            min_pose_presence_confidence=0.4,
+            min_tracking_confidence=0.4,
+            output_segmentation_masks=False,
+        )
+        return mp_vision.PoseLandmarker.create_from_options(options)
 
     def _load_checkpoint(self, model_path: str):
         try:
@@ -115,9 +143,9 @@ class KArSLMediaPipeInference:
         return {str(i): f"Sign {i}" for i in range(1, 503)}
 
     def _point_xy(self, landmarks, idx: int) -> List[float]:
-        if landmarks is None or len(landmarks.landmark) <= idx:
+        if landmarks is None or len(landmarks) <= idx:
             return [0.0, 0.0]
-        lm = landmarks.landmark[idx]
+        lm = landmarks[idx]
         return [float(lm.x), float(lm.y)]
 
     def _neck_xy(self, pose_landmarks) -> List[float]:
@@ -131,16 +159,26 @@ class KArSLMediaPipeInference:
 
     def _frame_to_features(self, result) -> np.ndarray:
         values: List[float] = []
-        pose = result.pose_landmarks
+        pose = result.pose_landmarks[0] if result.pose_landmarks else None
 
         for _, idx in POSE_POINTS:
             values.extend(self._point_xy(pose, idx))
         values.extend(self._neck_xy(pose))
 
-        for _, idx in HAND_ORDER:
-            values.extend(self._point_xy(result.right_hand_landmarks, idx))
-        for _, idx in HAND_ORDER:
-            values.extend(self._point_xy(result.left_hand_landmarks, idx))
+        if not self._warned_hand_fallback:
+            print(
+                "Warning: KArSL MediaPipe runtime is using the Tasks PoseLandmarker "
+                "available in this environment. Hand features are zero-filled; "
+                "video inference may be weaker than CSV evaluation until a hand "
+                "landmarker/holistic runtime is added."
+            )
+            self._warned_hand_fallback = True
+
+        # The training CSV has 21 right-hand and 21 left-hand keypoints after the
+        # body/neck features. This Tasks runtime only provides pose landmarks, so
+        # keep the expected 108-feature shape by zero-filling hand coordinates.
+        values.extend([0.0] * (len(HAND_ORDER) * 2))
+        values.extend([0.0] * (len(HAND_ORDER) * 2))
 
         arr = np.asarray(values, dtype=np.float32)
         if arr.shape[0] != self.input_dim:
@@ -154,17 +192,13 @@ class KArSLMediaPipeInference:
             raise ValueError("No frames provided")
 
         features = []
-        with self.mp_holistic.Holistic(
-            static_image_mode=False,
-            model_complexity=1,
-            enable_segmentation=False,
-            refine_face_landmarks=False,
-            min_detection_confidence=0.4,
-            min_tracking_confidence=0.4,
-        ) as holistic:
+        import mediapipe as mp
+
+        with self._get_pose_landmarker() as landmarker:
             for frame in frames:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                result = holistic.process(rgb)
+                mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                result = landmarker.detect(mp_img)
                 features.append(self._frame_to_features(result))
 
         arr = np.stack(features, axis=0)
