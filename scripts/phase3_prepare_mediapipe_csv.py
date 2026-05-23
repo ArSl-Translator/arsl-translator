@@ -1,4 +1,5 @@
 import argparse
+import ast
 import os
 import re
 from pathlib import Path
@@ -23,6 +24,8 @@ LABEL_CANDIDATES = (
     "word_id",
 )
 
+META_COLUMNS = {"signerID", "signer_id", "sign", "NoFrames", "no_frames", "n_frames"}
+
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -31,7 +34,7 @@ def parse_args():
     p.add_argument("--csv_dir", required=True, help="Folder containing signerXX_train.csv and signerXX_test.csv")
     p.add_argument("--output_dir", default="./outputs/mediapipe")
     p.add_argument("--label_col", default=None, help="Override label column name")
-    p.add_argument("--feature_dim", type=int, default=None, help="Usually 75, 99, or 132. Auto-detected if omitted.")
+    p.add_argument("--feature_dim", type=int, default=None, help="Usually 75, 99, 108, or 132. Auto-detected if omitted.")
     p.add_argument("--chunksize", type=int, default=512)
     p.add_argument("--max_rows_per_file", type=int, default=None, help="Quick smoke-test limiter")
     p.add_argument("--dry_run", action="store_true", help="Print detected columns without writing samples")
@@ -80,10 +83,45 @@ def _detect_label_col(df: pd.DataFrame, override: Optional[str]) -> str:
     return best_col
 
 
+def _is_sequence_cell(value) -> bool:
+    if pd.isna(value):
+        return False
+    text = str(value).strip()
+    return text.startswith("[") and text.endswith("]")
+
+
+def _parse_sequence_cell(value) -> list[float]:
+    if pd.isna(value):
+        return []
+    if isinstance(value, list):
+        return [float(v) for v in value]
+    text = str(value).strip()
+    if not text:
+        return []
+    try:
+        parsed = ast.literal_eval(text)
+    except Exception:
+        return []
+    if not isinstance(parsed, (list, tuple)):
+        return []
+    result = []
+    for item in parsed:
+        try:
+            result.append(float(item))
+        except Exception:
+            result.append(0.0)
+    return result
+
+
 def _feature_columns(df: pd.DataFrame, label_col: str) -> list[str]:
     cols = []
     for col in df.columns:
         if col == label_col:
+            continue
+        if str(col) in META_COLUMNS:
+            continue
+        if df[col].head(10).map(_is_sequence_cell).mean() >= 0.8:
+            cols.append(col)
             continue
         numeric = pd.to_numeric(df[col].head(50), errors="coerce")
         if numeric.notna().mean() >= 0.8:
@@ -91,7 +129,9 @@ def _feature_columns(df: pd.DataFrame, label_col: str) -> list[str]:
     return cols
 
 
-def _infer_feature_dim(n_features: int, requested: Optional[int]) -> int:
+def _infer_feature_dim(n_features: int, requested: Optional[int], sequence_cells: bool = False) -> int:
+    if sequence_cells:
+        return requested or n_features
     if requested:
         if n_features % requested != 0:
             raise ValueError(f"{n_features} feature columns are not divisible by --feature_dim {requested}")
@@ -101,7 +141,7 @@ def _infer_feature_dim(n_features: int, requested: Optional[int]) -> int:
             return dim
     raise ValueError(
         f"Could not infer feature_dim from {n_features} numeric feature columns. "
-        "Pass --feature_dim 75, 99, or 132 after checking the CSV."
+        "Pass --feature_dim 75, 99, 108, or 132 after checking the CSV."
     )
 
 
@@ -124,20 +164,43 @@ def _trim_empty_tail(seq: np.ndarray) -> np.ndarray:
     return seq[: non_empty[-1] + 1]
 
 
+def _row_to_sequence(row: pd.Series, feature_cols: list[str], feature_dim: int, sequence_cells: bool) -> np.ndarray:
+    if sequence_cells:
+        cols = [_parse_sequence_cell(row[col]) for col in feature_cols]
+        max_len = max((len(col) for col in cols), default=0)
+        if max_len == 0:
+            return np.zeros((1, feature_dim), dtype=np.float32)
+
+        seq = np.zeros((max_len, feature_dim), dtype=np.float32)
+        for col_idx, values in enumerate(cols[:feature_dim]):
+            if not values:
+                continue
+            usable = min(max_len, len(values))
+            seq[:usable, col_idx] = np.asarray(values[:usable], dtype=np.float32)
+        return _trim_empty_tail(seq)
+
+    flat = pd.to_numeric(row[feature_cols], errors="coerce").to_numpy(dtype=np.float32)
+    flat = np.nan_to_num(flat, nan=0.0, posinf=0.0, neginf=0.0)
+    seq = flat.reshape(-1, feature_dim)
+    return _trim_empty_tail(seq)
+
+
 def prepare_file(path: Path, args, sequence_dir: str, manifest_rows: list[dict]) -> None:
     split, signer = _split_and_signer(path)
     first = pd.read_csv(path, nrows=50)
     label_col = _detect_label_col(first, args.label_col)
     feature_cols = _feature_columns(first, label_col)
-    feature_dim = _infer_feature_dim(len(feature_cols), args.feature_dim)
+    sequence_cells = first[feature_cols].head(5).map(_is_sequence_cell).mean().mean() >= 0.8
+    feature_dim = _infer_feature_dim(len(feature_cols), args.feature_dim, sequence_cells=sequence_cells)
 
     print(f"\n[{path.name}]")
     print(f"  split       : {split}")
     print(f"  signer      : {signer}")
     print(f"  label_col   : {label_col}")
     print(f"  feature_cols: {len(feature_cols)}")
+    print(f"  cell_format : {'sequence lists' if sequence_cells else 'flat numeric'}")
     print(f"  feature_dim : {feature_dim}")
-    print(f"  frames/row  : {len(feature_cols) // feature_dim}")
+    print(f"  frames/row  : {'from list length' if sequence_cells else len(feature_cols) // feature_dim}")
 
     if args.dry_run:
         return
@@ -153,14 +216,11 @@ def prepare_file(path: Path, args, sequence_dir: str, manifest_rows: list[dict])
                 chunk = chunk.head(remaining)
 
             labels = chunk[label_col].map(_normalize_label_id)
-            values = chunk[feature_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=np.float32)
 
             for row_idx, label_id in enumerate(labels):
                 if label_id is None:
                     continue
-                flat = np.nan_to_num(values[row_idx], nan=0.0, posinf=0.0, neginf=0.0)
-                seq = flat.reshape(-1, feature_dim)
-                seq = _trim_empty_tail(seq)
+                seq = _row_to_sequence(chunk.iloc[row_idx], feature_cols, feature_dim, sequence_cells)
 
                 sample_id = f"{path.stem}_{written:07d}"
                 rel_path = os.path.join("sequences", signer, split, f"{sample_id}.npz")
