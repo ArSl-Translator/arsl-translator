@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Circle, Square, Play } from 'lucide-react';
+import { Camera, Circle, Layers, Play, Square } from 'lucide-react';
 import { predictFrames } from '../services/api';
 import PredictionResults from './PredictionResults';
 
@@ -186,16 +186,21 @@ const WebcamCapture = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-2">Webcam Capture</h2>
-        <p className="text-gray-500 mb-6">
-          Capture video from your webcam and get real-time sign language predictions.
-        </p>
+    <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="panel overflow-hidden">
+        <div className="border-b border-gray-200 bg-white px-6 py-5">
+          <p className="section-title">Live recognition</p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-950">Webcam capture</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+            Record a short isolated sign directly from the browser and send sampled frames to the API.
+          </p>
+        </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-600 mb-2">
-            Model
+        <div className="space-y-5 p-6">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <Layers className="h-4 w-4 text-gray-400" />
+            Recognition model
           </label>
           <select
             value={model}
@@ -206,7 +211,7 @@ const WebcamCapture = () => {
               setError(null);
             }}
             disabled={isRecording || loading}
-            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
+            className="input font-semibold disabled:opacity-60"
           >
             <option value="karsl_mediapipe">KArSL MediaPipe classifier</option>
             <option value="karsl">KArSL raw-frame baseline</option>
@@ -214,10 +219,10 @@ const WebcamCapture = () => {
           </select>
         </div>
 
-        <div className="relative bg-gray-900 rounded-2xl overflow-hidden mb-4">
+        <div className="relative mb-4 overflow-hidden rounded-lg bg-gray-950">
           {!stream ? (
             <div className="aspect-video flex items-center justify-center">
-              <button onClick={startWebcam} className="btn-primary rounded-xl">
+                <button onClick={startWebcam} className="btn-primary">
                 <Camera className="w-5 h-5 inline mr-2" />
                 Start Webcam
               </button>
@@ -229,24 +234,24 @@ const WebcamCapture = () => {
                 autoPlay
                 playsInline
                 muted
-                className="w-full max-h-[500px] mx-auto"
+                className="mx-auto max-h-[560px] w-full"
                 style={{ display: 'block' }}
               />
 
               {!isVideoReady && (
-                <div className="absolute top-4 left-4 bg-amber-500 text-white px-4 py-2 rounded-xl font-medium text-sm">
+                <div className="absolute left-4 top-4 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white">
                   Loading video...
                 </div>
               )}
 
               {isRecording && (
-                <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-500/90 text-white px-4 py-2 rounded-xl font-medium text-sm">
+                <div className="absolute left-4 top-4 flex items-center gap-2 rounded-lg bg-red-500/90 px-4 py-2 text-sm font-semibold text-white">
                   <Circle className="w-3 h-3 animate-pulse fill-current" />
                   Recording {frameBuffer.length}/{bufferSize}
                 </div>
               )}
 
-              <div className="absolute top-4 right-4 bg-black/70 text-white px-4 py-2 rounded-xl font-medium text-sm">
+              <div className="absolute right-4 top-4 rounded-lg bg-black/70 px-4 py-2 text-sm font-semibold text-white">
                 {frameBuffer.length} frames
               </div>
             </>
@@ -256,14 +261,14 @@ const WebcamCapture = () => {
         <canvas ref={canvasRef} className="hidden" />
 
         {webcamError && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50 text-sm text-amber-800">
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
             {webcamError}
           </div>
         )}
 
         {stream && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-gray-50/80">
-            <label className="block text-sm font-medium text-gray-600 mb-2">
+          <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <label className="mb-2 block text-sm font-semibold text-gray-700">
               Buffer: {bufferSize} frames (~{(bufferSize / 30).toFixed(1)}s)
             </label>
             <input
@@ -274,7 +279,7 @@ const WebcamCapture = () => {
               value={bufferSize}
               onChange={(e) => setBufferSize(Number(e.target.value))}
               disabled={isRecording}
-              className="w-full h-2 rounded-full accent-primary-500"
+              className="h-2 w-full rounded-full accent-gray-950"
             />
           </div>
         )}
@@ -286,12 +291,12 @@ const WebcamCapture = () => {
                 <button
                   onClick={startRecording}
                   disabled={!isVideoReady}
-                  className="btn-primary flex-1 rounded-xl"
+                  className="btn-primary flex-1"
                 >
                   <Play className="w-5 h-5 inline mr-2" />
                   {isVideoReady ? 'Start Recording' : 'Loading...'}
                 </button>
-                <button onClick={stopWebcam} className="btn-secondary rounded-xl">
+                <button onClick={stopWebcam} className="btn-secondary">
                   Stop Webcam
                 </button>
               </>
@@ -302,12 +307,12 @@ const WebcamCapture = () => {
                     stopRecording();
                     handlePredict(frameBufferRef.current);
                   }}
-                  className="btn-primary flex-1 rounded-xl"
+                  className="btn-primary flex-1"
                 >
                   <Square className="w-5 h-5 inline mr-2" />
                   Stop & Predict
                 </button>
-                <button onClick={stopRecording} className="btn-danger rounded-xl">
+                <button onClick={stopRecording} className="btn-danger">
                   Cancel
                 </button>
               </>
@@ -316,13 +321,16 @@ const WebcamCapture = () => {
         )}
 
         {error && (
-          <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
+        </div>
       </div>
 
-      <PredictionResults result={result} loading={loading} />
+      <div className="space-y-6">
+        <PredictionResults result={result} loading={loading} />
+      </div>
     </div>
   );
 };

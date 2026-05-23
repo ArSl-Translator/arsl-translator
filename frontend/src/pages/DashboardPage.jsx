@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, Activity, Video, Camera, TrendingUp } from 'lucide-react';
+import { Activity, BarChart3, Camera, Gauge, Target, TrendingUp, Video } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -36,17 +36,11 @@ export default function DashboardPage() {
 
       for (let page = 2; page <= totalPages; page += 1) {
         const nextPage = await getHistory(page, pageSize);
-        if (!nextPage.items || nextPage.items.length === 0) {
-          break;
-        }
+        if (!nextPage.items || nextPage.items.length === 0) break;
         items = items.concat(nextPage.items);
       }
 
-      setHistory({
-        ...firstPage,
-        total,
-        items,
-      });
+      setHistory({ ...firstPage, total, items });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load dashboard data');
     } finally {
@@ -58,17 +52,9 @@ export default function DashboardPage() {
     fetchHistory();
   }, [fetchHistory]);
 
-  const {
-    totalCount,
-    videoCount,
-    webcamCount,
-    avgConfidence,
-    dailyCounts,
-    topLabels,
-  } = useMemo(() => {
+  const { totalCount, videoCount, webcamCount, avgConfidence, dailyCounts, topLabels } = useMemo(() => {
     const items = history?.items || [];
     const total = history?.total ?? items.length;
-
     let video = 0;
     let webcam = 0;
     let confidenceSum = 0;
@@ -76,16 +62,15 @@ export default function DashboardPage() {
     const labelCounts = {};
 
     items.forEach((item) => {
-      if (item.prediction_type === 'video') video += 1;
-      else if (item.prediction_type === 'frames') webcam += 1;
+      if (item.prediction_type?.startsWith('video')) video += 1;
+      else if (item.prediction_type?.startsWith('frames')) webcam += 1;
 
       if (typeof item.top_prediction_confidence === 'number') {
         confidenceSum += item.top_prediction_confidence;
         confidenceCount += 1;
       }
 
-      const label =
-        item.top_prediction_text || item.top_prediction_label || 'Unknown';
+      const label = item.top_prediction_text || item.top_prediction_label || 'Unknown';
       labelCounts[label] = (labelCounts[label] || 0) + 1;
     });
 
@@ -98,29 +83,20 @@ export default function DashboardPage() {
     }
 
     const dailyMap = days.reduce((acc, day) => {
-      acc[getDayKey(day)] = {
-        key: getDayKey(day),
-        label: formatDayLabel(day),
-        count: 0,
-      };
+      acc[getDayKey(day)] = { key: getDayKey(day), label: formatDayLabel(day), count: 0 };
       return acc;
     }, {});
 
     items.forEach((item) => {
-      const created = new Date(item.created_at);
-      const key = getDayKey(created);
-      if (dailyMap[key]) {
-        dailyMap[key].count += 1;
-      }
+      const key = getDayKey(new Date(item.created_at));
+      if (dailyMap[key]) dailyMap[key].count += 1;
     });
-
-    const daily = Object.values(dailyMap);
 
     const top = Object.entries(labelCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name, count]) => ({
-        name: name.length > 18 ? `${name.slice(0, 18)}…` : name,
+        name: name.length > 18 ? `${name.slice(0, 18)}...` : name,
         count,
       }));
 
@@ -128,157 +104,125 @@ export default function DashboardPage() {
       totalCount: total,
       videoCount: video,
       webcamCount: webcam,
-      avgConfidence:
-        confidenceCount > 0 ? confidenceSum / confidenceCount : null,
-      dailyCounts: daily,
+      avgConfidence: confidenceCount > 0 ? confidenceSum / confidenceCount : null,
+      dailyCounts: Object.values(dailyMap),
       topLabels: top,
     };
   }, [history]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="card">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
-            <BarChart3 className="w-5 h-5" />
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="panel overflow-hidden">
+        <div className="border-b border-gray-200 bg-white px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="section-title">Model operations</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight text-gray-950">Prediction analytics</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Monitor usage, confidence, and the labels your recognition system is producing.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h2>
-            <p className="text-sm text-gray-500">
-              Insights from your predictions
-            </p>
-          </div>
+        </div>
+
+        <div className="p-6">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-950"></div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && (!history?.items || history.items.length === 0) && (
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 py-14 text-center text-gray-500">
+              <Activity className="mx-auto mb-4 h-12 w-12 opacity-30" />
+              <p className="font-semibold text-gray-700">No predictions yet</p>
+              <p className="mt-1 text-sm">Make a prediction to start collecting analytics.</p>
+            </div>
+          )}
+
+          {!loading && !error && history?.items?.length > 0 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: 'Total predictions', value: totalCount, icon: Activity },
+                  { label: 'Video predictions', value: videoCount, icon: Video },
+                  { label: 'Webcam predictions', value: webcamCount, icon: Camera },
+                  {
+                    label: 'Average confidence',
+                    value: avgConfidence != null ? `${(avgConfidence * 100).toFixed(1)}%` : '-',
+                    icon: Gauge,
+                  },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-500">{label}</p>
+                      <Icon className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div className="mt-3 text-3xl font-bold tracking-tight text-gray-950">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <ChartPanel icon={TrendingUp} title="Last 7 days">
+                  <LineChart data={dailyCounts}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#111827" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ChartPanel>
+
+                <ChartPanel icon={Target} title="Prediction sources">
+                  <BarChart data={[{ name: 'Video', count: videoCount }, { name: 'Webcam', count: webcamCount }]}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#111827" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ChartPanel>
+              </div>
+
+              <ChartPanel icon={Video} title="Top predicted labels">
+                <BarChart data={topLabels}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartPanel>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-200 border-t-primary-500"></div>
-        </div>
-      )}
-
-      {error && (
-        <div className="px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && (!history?.items || history.items.length === 0) && (
-        <div className="card text-center py-14 text-gray-500">
-          <Activity className="w-14 h-14 mx-auto mb-4 opacity-30" />
-          <p className="font-medium text-gray-600">No predictions yet</p>
-          <p className="text-sm mt-1">
-            Make a prediction to start seeing dashboard insights
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && history?.items?.length > 0 && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="text-sm text-gray-500">Total Predictions</div>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
-                {totalCount}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="text-sm text-gray-500">Video Predictions</div>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
-                {videoCount}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="text-sm text-gray-500">Webcam Predictions</div>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
-                {webcamCount}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="text-sm text-gray-500">Avg Confidence</div>
-              <div className="text-2xl font-bold text-gray-900 mt-1">
-                {avgConfidence != null
-                  ? `${(avgConfidence * 100).toFixed(1)}%`
-                  : '—'}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-gray-500" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Predictions in the Last 7 Days
-                </h3>
-              </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dailyCounts}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#2563eb"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white/70 px-5 py-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-4 h-4 text-gray-500" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Prediction Types
-                </h3>
-              </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { name: 'Video', count: videoCount },
-                      { name: 'Webcam', count: webcamCount },
-                    ]}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white/70 px-5 py-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Video className="w-4 h-4 text-gray-500" />
-              <Camera className="w-4 h-4 text-gray-500" />
-              <h3 className="text-lg font-semibold text-gray-800">
-                Top Predicted Labels
-              </h3>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topLabels}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
+function ChartPanel({ icon: Icon, title, children }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Icon className="h-4 w-4 text-gray-500" />
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+      </div>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

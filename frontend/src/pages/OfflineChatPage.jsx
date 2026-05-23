@@ -1,49 +1,96 @@
 import React from 'react';
-import { Bluetooth, MessageSquare, WifiOff, Smartphone } from 'lucide-react';
+import { Bluetooth, Database, FileArchive, MessageSquare, RadioTower, Smartphone, WifiOff } from 'lucide-react';
+
+const features = [
+  {
+    icon: WifiOff,
+    title: 'No internet required',
+    text: 'Nearby Android devices communicate directly over Bluetooth Classic sockets.',
+  },
+  {
+    icon: RadioTower,
+    title: 'Server and client roles',
+    text: 'One phone waits as the Bluetooth server while the other connects as the client.',
+  },
+  {
+    icon: FileArchive,
+    title: 'Binary transfer',
+    text: 'The protocol supports framed text and media payloads for practical offline exchange.',
+  },
+  {
+    icon: Database,
+    title: 'Local history',
+    text: 'Room stores conversations on device so chats remain available after reconnecting.',
+  },
+];
 
 const OfflineChatPage = () => {
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0">
-            <Bluetooth className="w-6 h-6 text-primary-600" />
-          </div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="panel overflow-hidden">
+        <div className="grid gap-6 border-b border-gray-200 bg-white p-6 lg:grid-cols-[1fr_360px]">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-2">Offline Bluetooth Chat</h2>
-            <p className="text-gray-600">
-              A companion Android app for nearby communication without internet. It helps people who cannot speak or hear easily chat with someone beside them using text and media over Bluetooth.
+            <p className="section-title">Companion mobile system</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">Offline Bluetooth chat for nearby communication</h2>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-500">
+              The Android app adds a distributed-systems layer to the translator: socket programming,
+              background transfer threads, Bluetooth discovery, and patient-assistant style text communication
+              without Wi-Fi, mobile data, or sign language knowledge.
             </p>
           </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
+                <Bluetooth className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-950">Android project</p>
+                <p className="text-xs font-medium text-gray-500">Kotlin, Jetpack Compose, Room</p>
+              </div>
+            </div>
+            <code className="mt-4 block rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+              offline-chat-android/
+            </code>
+          </div>
+        </div>
+
+        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">
+          {features.map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <Icon className="mb-3 h-5 w-5 text-gray-900" />
+              <h3 className="font-bold text-gray-950">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-gray-500">{text}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="card">
-          <WifiOff className="w-6 h-6 text-primary-600 mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">No connectivity</h3>
-          <p className="text-sm text-gray-600">Works locally over Bluetooth Classic sockets.</p>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-bold text-gray-950">What it demonstrates</h3>
+          </div>
+          <div className="mt-4 space-y-3 text-sm leading-6 text-gray-600">
+            <p>Bluetooth RFCOMM socket setup with explicit server/client behavior.</p>
+            <p>Threaded listening and transfer loops so the UI remains responsive while messages arrive.</p>
+            <p>Structured local storage for conversations, messages, and media metadata.</p>
+          </div>
         </div>
-        <div className="card">
-          <MessageSquare className="w-6 h-6 text-primary-600 mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">Separate chats</h3>
-          <p className="text-sm text-gray-600">Each nearby device gets its own local conversation history.</p>
-        </div>
-        <div className="card">
-          <Smartphone className="w-6 h-6 text-primary-600 mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-1">Android app</h3>
-          <p className="text-sm text-gray-600">Open <code>offline-chat-android</code> in Android Studio to build the APK.</p>
-        </div>
-      </div>
 
-      <div className="card">
-        <h3 className="font-semibold text-gray-900 mb-3">Android project location</h3>
-        <code className="block px-4 py-3 rounded-xl bg-gray-50 text-sm text-gray-700">
-          offline-chat-android/
-        </code>
-        <p className="mt-3 text-sm text-gray-500">
-          After building in Android Studio, the debug APK is usually generated at <code>offline-chat-android/app/build/outputs/apk/debug/app-debug.apk</code>.
-        </p>
+        <div className="card">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-bold text-gray-950">APK build path</h3>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-gray-600">
+            Open the Android folder in Android Studio, run a debug build, then install the generated APK on two
+            Android devices for Bluetooth testing.
+          </p>
+          <code className="mt-4 block rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            offline-chat-android/app/build/outputs/apk/debug/app-debug.apk
+          </code>
+        </div>
       </div>
     </div>
   );

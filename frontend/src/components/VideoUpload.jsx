@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Video, X } from 'lucide-react';
+import { ArrowRight, FileVideo, Layers, Upload, Video, X } from 'lucide-react';
 import { predictVideo } from '../services/api';
 import PredictionResults from './PredictionResults';
 
@@ -49,17 +49,28 @@ const VideoUpload = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <h2 className="text-xl font-bold text-gray-900 tracking-tight mb-2">Upload Video</h2>
-        <p className="text-gray-500 mb-6">
-          Upload a video file of a sign language gesture to get predictions.
-        </p>
+    <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="panel overflow-hidden">
+        <div className="border-b border-gray-200 bg-white px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="section-title">Video intelligence</p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-950">Upload a sign video</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+                Run the trained landmark classifier on isolated Arabic sign clips and inspect the ranked predictions.
+              </p>
+            </div>
+            <div className="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-600 sm:block">
+              <FileVideo className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">
-              Model
+        <div className="space-y-5 p-6">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Layers className="h-4 w-4 text-gray-400" />
+              Recognition model
             </label>
             <select
               value={model}
@@ -69,7 +80,7 @@ const VideoUpload = () => {
                 setResult(null);
                 setError(null);
               }}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="input font-semibold"
             >
               <option value="karsl_mediapipe">KArSL MediaPipe classifier</option>
               <option value="karsl">KArSL raw-frame baseline</option>
@@ -78,10 +89,10 @@ const VideoUpload = () => {
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 ${
+            className={`rounded-lg border-2 border-dashed p-10 text-center transition-all duration-200 ${
               file
-                ? 'border-primary-400 bg-primary-50/50'
-                : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50/50'
+                ? 'border-gray-950 bg-gray-50'
+                : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
             }`}
           >
             <input
@@ -97,29 +108,29 @@ const VideoUpload = () => {
               className="cursor-pointer flex flex-col items-center"
             >
               {file ? (
-                <Video className="w-12 h-12 text-primary-500 mb-2" />
+                <Video className="mb-3 h-12 w-12 text-gray-950" />
               ) : (
-                <Upload className="w-12 h-12 text-gray-400 mb-2" />
+                <Upload className="mb-3 h-12 w-12 text-gray-400" />
               )}
-              <span className="text-base font-medium text-gray-700">
+              <span className="text-base font-bold text-gray-800">
                 {file ? file.name : 'Click to upload video'}
               </span>
-              <span className="text-sm text-gray-500 mt-1">
+              <span className="mt-1 text-sm text-gray-500">
                 MP4, AVI, MOV (max 100MB)
               </span>
             </label>
           </div>
 
           {preview && (
-            <div className="relative rounded-2xl overflow-hidden bg-black/5">
+            <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-black">
               <video
                 src={preview}
                 controls
-                className="w-full max-h-96 rounded-2xl"
+                className="max-h-[520px] w-full"
               />
               <button
                 onClick={handleClear}
-                className="absolute top-2 right-2 p-2 bg-red-500/90 text-white rounded-xl hover:bg-red-600 transition-colors"
+                className="absolute right-3 top-3 rounded-lg bg-red-500/90 p-2 text-white transition-colors hover:bg-red-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -130,26 +141,33 @@ const VideoUpload = () => {
             <button
               onClick={handlePredict}
               disabled={!file || loading}
-              className="btn-primary flex-1 rounded-xl"
+              className="btn-primary flex-1"
             >
-              {loading ? 'Processing...' : 'Predict Sign'}
+              {loading ? 'Processing...' : (
+                <>
+                  Predict Sign
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
             {file && !loading && (
-              <button onClick={handleClear} className="btn-secondary rounded-xl">
+              <button onClick={handleClear} className="btn-secondary">
                 Clear
               </button>
             )}
           </div>
-        </div>
 
-        {error && (
-          <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {error}
+            </div>
+          )}
+        </div>
       </div>
 
-      <PredictionResults result={result} loading={loading} />
+      <div className="space-y-6">
+        <PredictionResults result={result} loading={loading} />
+      </div>
     </div>
   );
 };

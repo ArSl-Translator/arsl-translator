@@ -74,7 +74,20 @@ const PredictionResults = ({ result, loading = false }) => {
   }
 
   if (!result) {
-    return null;
+    return (
+      <div className="card">
+        <p className="section-title">Prediction output</p>
+        <div className="mt-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+            <Trophy className="h-5 w-5 text-gray-400" />
+          </div>
+          <h3 className="mt-4 text-lg font-bold text-gray-900">No prediction yet</h3>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            Upload or record a sign to see top ranked labels, confidence scores, and pronunciation controls.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const { top_prediction, top_k_predictions } = result;
@@ -82,33 +95,35 @@ const PredictionResults = ({ result, loading = false }) => {
   return (
     <div className="space-y-4">
       {top_prediction && (
-        <div className="card bg-gradient-to-br from-primary-50/80 to-white">
+        <div className="card">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0">
-              <Trophy className="w-5 h-5 text-primary-600" />
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-950">
+              <Trophy className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Top Prediction</h3>
-              <p className="text-2xl font-bold text-gray-900 mb-2">{top_prediction.text}</p>
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-base font-semibold text-primary-600">
+              <h3 className="section-title mb-2">Top Prediction</h3>
+              <p className="mb-3 text-3xl font-bold text-gray-950">{top_prediction.text}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
                   {(top_prediction.confidence * 100).toFixed(1)}% confident
                 </span>
-                <span className="text-sm text-gray-500">Label ID: {top_prediction.label_id}</span>
+                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-500">
+                  Label ID: {top_prediction.label_id}
+                </span>
               </div>
             </div>
             {canPlayAudio(top_prediction) && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
                   onClick={() => playAudio(top_prediction.label_id)}
-                  className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"
+                  className="rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-100"
                   title="Play pronunciation"
                 >
                   <Volume2 className="w-5 h-5" />
                 </button>
                 <button
                   onClick={toggleMute}
-                  className={`p-2 rounded-lg transition-colors ${
+                  className={`rounded-lg p-2 transition-colors ${
                     muted ? 'text-red-400 hover:bg-red-50' : 'text-gray-400 hover:bg-gray-100'
                   }`}
                   title={muted ? 'Unmute auto-play' : 'Mute auto-play'}
@@ -118,7 +133,7 @@ const PredictionResults = ({ result, loading = false }) => {
               </div>
             )}
             {!canPlayAudio(top_prediction) && (
-              <div className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-gray-100 text-xs font-medium text-gray-500">
+              <div className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-500">
                 Text output
               </div>
             )}
@@ -130,20 +145,20 @@ const PredictionResults = ({ result, loading = false }) => {
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-gray-500" />
-            <h3 className="text-lg font-semibold text-gray-800">Other Predictions</h3>
+            <h3 className="text-lg font-bold text-gray-900">Other Predictions</h3>
           </div>
           <div className="space-y-2">
             {top_k_predictions.slice(1).map((pred, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 hover:bg-gray-100/80 transition-colors"
+                className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/80 p-3 transition-colors hover:bg-gray-100/80"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-200 text-gray-700 text-sm font-bold">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-sm font-bold text-gray-700 shadow-sm">
                     {idx + 2}
                   </span>
                   <div>
-                    <p className="font-medium text-gray-900">{pred.text}</p>
+                    <p className="font-semibold text-gray-900">{pred.text}</p>
                     <p className="text-xs text-gray-500">Label ID: {pred.label_id}</p>
                   </div>
                 </div>
@@ -158,7 +173,7 @@ const PredictionResults = ({ result, loading = false }) => {
                     </button>
                   )}
                   <div>
-                    <p className="font-semibold text-primary-600">
+                    <p className="font-bold text-gray-950">
                       {(pred.confidence * 100).toFixed(1)}%
                     </p>
                     <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">

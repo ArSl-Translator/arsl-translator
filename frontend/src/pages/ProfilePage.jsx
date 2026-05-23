@@ -84,43 +84,47 @@ export default function ProfilePage() {
     : '';
 
   return (
-    <div className="max-w-lg mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       {/* Profile Info Card */}
-      <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
-            <User className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Profile</h2>
-            <div className="flex items-center gap-1.5 text-sm text-gray-500">
-              <Calendar className="w-3.5 h-3.5" />
-              Member since {memberSince}
+      <div className="panel overflow-hidden">
+        <div className="border-b border-gray-200 bg-white px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
+              <User className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="section-title">Account settings</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight text-gray-950">Profile</h2>
+              <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                <Calendar className="h-3.5 w-3.5" />
+                Member since {memberSince}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 text-primary-600 flex items-center justify-center text-3xl font-bold">
+        <div className="p-6">
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-3xl font-bold text-gray-950">
             {user?.username?.charAt(0).toUpperCase()}
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-emerald-50 text-sm text-emerald-700">
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
             {success}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Username</label>
+            <label className="mb-1.5 block text-sm font-semibold text-gray-600">Username</label>
             <input
               type="text"
               className="input"
@@ -132,7 +136,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
+            <label className="mb-1.5 block text-sm font-semibold text-gray-600">Email</label>
             <input
               type="email"
               className="input"
@@ -142,40 +146,45 @@ export default function ProfilePage() {
             />
           </div>
 
-          <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 rounded-xl" disabled={loading}>
-            <Save className="w-4 h-4" />
+          <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
+            <Save className="h-4 w-4" />
             {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
+        </div>
       </div>
 
       {/* Change Password Card */}
-      <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white">
-            <Lock className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Change Password</h2>
-            <p className="text-sm text-gray-500">Update your account password</p>
+      <div className="panel overflow-hidden">
+        <div className="border-b border-gray-200 bg-white px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="section-title">Security</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight text-gray-950">Change password</h2>
+              <p className="mt-1 text-sm text-gray-500">Update your account credentials</p>
+            </div>
           </div>
         </div>
 
+        <div className="p-6">
         {pwError && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
             {pwError}
           </div>
         )}
 
         {pwSuccess && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-emerald-50 text-sm text-emerald-700">
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
             {pwSuccess}
           </div>
         )}
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Current Password</label>
+            <label className="mb-1.5 block text-sm font-semibold text-gray-600">Current Password</label>
             <div className="relative">
               <input
                 type={showCurrentPw ? 'text' : 'password'}
@@ -196,7 +205,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">New Password</label>
+            <label className="mb-1.5 block text-sm font-semibold text-gray-600">New Password</label>
             <div className="relative">
               <input
                 type={showNewPw ? 'text' : 'password'}
@@ -218,7 +227,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1.5">Confirm New Password</label>
+            <label className="mb-1.5 block text-sm font-semibold text-gray-600">Confirm New Password</label>
             <div className="relative">
               <input
                 type={showConfirmPw ? 'text' : 'password'}
@@ -239,11 +248,12 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3 rounded-xl" disabled={pwLoading}>
-            <Lock className="w-4 h-4" />
+          <button type="submit" className="btn-primary w-full py-3" disabled={pwLoading}>
+            <Lock className="h-4 w-4" />
             {pwLoading ? 'Updating...' : 'Change Password'}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );
