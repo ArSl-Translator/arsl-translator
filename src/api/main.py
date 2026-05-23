@@ -18,6 +18,7 @@ from src.api.auth.router import router as auth_router
 from src.api.database.connection import get_db
 from src.api.database.init_db import create_tables
 from src.api.inference import ModelInference
+from src.api.karsl_mediapipe_inference import KArSLMediaPipeInference
 from src.api.models.user import User
 from src.utils.generate_audio import generate_all_audio
 
@@ -77,6 +78,22 @@ def resolve_arabsign_model_path() -> Optional[str]:
     return _first_existing(candidates)
 
 
+def resolve_karsl_mediapipe_model_path() -> Optional[str]:
+    candidates: List[str] = []
+    env_path = os.environ.get("KARSL_MEDIAPIPE_MODEL_PATH")
+    if env_path:
+        candidates.append(env_path)
+    candidates.extend(
+        [
+            "./models/karsl_mediapipe_bilstm_best.pt",
+            "./models/karsl_mediapipe_bilstm_last.pt",
+            "./artifacts/models/karsl_mediapipe_bilstm_best.pt",
+            "./artifacts/models/karsl_mediapipe_bilstm_last.pt",
+        ]
+    )
+    return _first_existing(candidates)
+
+
 def _first_existing(candidates: List[str]) -> Optional[str]:
     seen: Set[str] = set()
     for path in candidates:
@@ -95,11 +112,15 @@ def normalize_model_name(model: Optional[str]) -> str:
         "default": "karsl",
         "arsl": "karsl",
         "baseline": "karsl",
+        "mediapipe": "karsl_mediapipe",
+        "karsl-mediapipe": "karsl_mediapipe",
+        "karsl_pose": "karsl_mediapipe",
+        "pose": "karsl_mediapipe",
         "arab-sign": "arabsign",
         "arab_sign": "arabsign",
     }
     selected = aliases.get(selected, selected)
-    if selected not in {"karsl", "arabsign"}:
+    if selected not in {"karsl", "karsl_mediapipe", "arabsign"}:
         raise HTTPException(status_code=400, detail=f"Unknown model '{model}'")
     return selected
 
@@ -130,9 +151,11 @@ def startup():
         print(f"Warning: Audio generation failed: {exc}")
 
     karsl_model_path = resolve_karsl_model_path()
+    karsl_mediapipe_model_path = resolve_karsl_mediapipe_model_path()
     arabsign_model_path = resolve_arabsign_model_path()
     model_paths = {
         "karsl": karsl_model_path,
+        "karsl_mediapipe": karsl_mediapipe_model_path,
         "arabsign": arabsign_model_path,
     }
 
@@ -144,6 +167,15 @@ def startup():
             print(f"Error loading KArSL model: {exc}")
     else:
         print("Warning: KArSL checkpoint missing. Train it or set MODEL_PATH.")
+
+    if karsl_mediapipe_model_path:
+        try:
+            model_registry["karsl_mediapipe"] = KArSLMediaPipeInference(model_path=karsl_mediapipe_model_path)
+            print(f"KArSL MediaPipe model loaded from {karsl_mediapipe_model_path}")
+        except Exception as exc:
+            print(f"Error loading KArSL MediaPipe model: {exc}")
+    else:
+        print("Warning: KArSL MediaPipe checkpoint missing. Set KARSL_MEDIAPIPE_MODEL_PATH or place models/karsl_mediapipe_bilstm_best.pt.")
 
     if arabsign_model_path:
         try:

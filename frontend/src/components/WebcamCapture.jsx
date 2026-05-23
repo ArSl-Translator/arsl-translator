@@ -13,7 +13,7 @@ const WebcamCapture = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [model, setModel] = useState(() => localStorage.getItem('arsl_selected_model') || 'karsl');
+  const [model, setModel] = useState(() => localStorage.getItem('arsl_selected_model') || 'karsl_mediapipe');
 
   const [webcamError, setWebcamError] = useState(null);
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -208,7 +208,8 @@ const WebcamCapture = () => {
             disabled={isRecording || loading}
             className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 disabled:opacity-60"
           >
-            <option value="karsl">KArSL baseline classifier</option>
+            <option value="karsl_mediapipe">KArSL MediaPipe classifier</option>
+            <option value="karsl">KArSL raw-frame baseline</option>
             <option value="arabsign">ArabSign pose translator</option>
           </select>
         </div>

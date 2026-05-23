@@ -426,7 +426,13 @@ artifacts/models/karsl_mediapipe_bilstm_best.pt
 artifacts/models/karsl_mediapipe_bilstm_last.pt
 ```
 
-The API inference path still expects the raw-frame ResNet checkpoint today. Use the MediaPipe checkpoint for training/evaluation evidence first; API inference support for the MediaPipe KArSL model can be added after the checkpoint format and CSV feature dimension are confirmed.
+For local API inference, copy the best checkpoint into:
+
+```text
+models/karsl_mediapipe_bilstm_best.pt
+```
+
+The API loads it as `karsl_mediapipe`. The frontend exposes this as **KArSL MediaPipe classifier** for both webcam and video upload. The adapter extracts MediaPipe holistic pose/hand landmarks from incoming frames and feeds the same 108-value landmark layout used by the CSV training route into the BiLSTM classifier.
 
 ## Google Colab Training
 
