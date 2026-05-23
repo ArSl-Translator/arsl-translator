@@ -34,6 +34,7 @@ services:
       - ARABSIGN_MODEL_PATH=/app/models/arabsign_best_model.pt
       - MEDIAPIPE_MODEL_PATH=/app/mediapipe_models/pose_landmarker_full.task
       - HAND_LANDMARKER_MODEL_PATH=/app/mediapipe_models/hand_landmarker.task
+      - KARSL_MEDIAPIPE_MIRROR_INPUT=true
     volumes:
       - ./data:/app/data              # Mount data directory for access
       - ./artifacts:/app/artifacts    # Mount artifacts directory

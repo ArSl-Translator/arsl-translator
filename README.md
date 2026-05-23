@@ -434,6 +434,14 @@ models/karsl_mediapipe_bilstm_best.pt
 
 The API loads it as `karsl_mediapipe`. The frontend exposes this as **KArSL MediaPipe classifier** for both webcam and video upload. The adapter extracts MediaPipe holistic pose/hand landmarks from incoming frames and feeds the same 108-value landmark layout used by the CSV training route into the BiLSTM classifier.
 
+For front-camera and webcam-style videos, the runtime mirrors frames by default before landmark extraction:
+
+```text
+KARSL_MEDIAPIPE_MIRROR_INPUT=true
+```
+
+Set it to `false` only when testing videos that already match the dataset orientation.
+
 ## Google Colab Training
 
 Use Colab for the easiest GPU workflow.

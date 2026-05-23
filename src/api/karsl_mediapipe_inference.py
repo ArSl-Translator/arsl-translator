@@ -105,6 +105,11 @@ class KArSLMediaPipeInference:
             "true",
             "yes",
         }
+        self.mirror_input = os.getenv("KARSL_MEDIAPIPE_MIRROR_INPUT", "true").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
 
         self.model = LandmarkBiLSTMClassifier(
             input_dim=self.input_dim,
@@ -264,6 +269,8 @@ class KArSLMediaPipeInference:
 
         with self._get_pose_landmarker() as pose_landmarker, self._get_hand_landmarker() as hand_landmarker:
             for frame in frames:
+                if self.mirror_input:
+                    frame = cv2.flip(frame, 1)
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
                 pose_result = pose_landmarker.detect(mp_img)
