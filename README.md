@@ -294,7 +294,16 @@ These metrics come from the migrated ArabSign training notes. Re-run training/ev
 
 ## KArSL Training Pipeline
 
-The KArSL approach is a second model path. It uses raw RGB frames and a ResNet18 + BiLSTM classifier for 502 signs.
+The KArSL approach is a second model path for 502 isolated Arabic signs. The project now supports two training routes:
+
+| Route | Input | Model | Best use |
+|---|---|---|---|
+| Raw-frame baseline | RGB frame folders | ResNet18 + BiLSTM | When you have the original image/video frame dataset |
+| MediaPipe CSV route | Pre-extracted pose landmark CSV files | Landmark BiLSTM | When you have `signerXX_train.csv` / `signerXX_test.csv` files like the shared OneDrive MediaPipe Pose dataset |
+
+The MediaPipe CSV route is the practical option when storage is limited, because it trains on compact landmark sequences instead of copying millions of raw frames.
+
+### Route A: Raw RGB Frame Baseline
 
 Expected dataset layout:
 
@@ -338,6 +347,86 @@ Restart the API:
 ```bash
 docker compose restart api
 ```
+
+### Route B: MediaPipe Pose CSV Training
+
+Expected cloud dataset layout after copying the OneDrive files to a VM:
+
+```text
+data/mediapipe_pose/
+  KARSL-502_Labels.xlsx
+  KARSL_Labels.txt
+  signer01_train.csv
+  signer01_test.csv
+  signer02_train.csv
+  signer02_test.csv
+  signer03_train.csv
+  signer03_test.csv
+```
+
+First inspect the CSV structure without writing anything:
+
+```bash
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe \
+  --dry_run
+```
+
+If the script detects the label column and feature dimension correctly, prepare compact sequence files:
+
+```bash
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe
+```
+
+If label detection fails, pass the column name printed from the CSV header:
+
+```bash
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe \
+  --label_col label_id
+```
+
+Smoke test:
+
+```bash
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe_smoke \
+  --max_rows_per_file 200
+
+python scripts/phase3_train_mediapipe_csv.py \
+  --manifest_csv ./outputs/mediapipe_smoke/mediapipe_manifest.csv \
+  --epochs 1 \
+  --batch_size 32 \
+  --max_samples 500 \
+  --no_mlflow
+```
+
+Real training starting point:
+
+```bash
+python scripts/phase3_train_mediapipe_csv.py \
+  --manifest_csv ./outputs/mediapipe/mediapipe_manifest.csv \
+  --use_signer all \
+  --epochs 30 \
+  --batch_size 64 \
+  --num_frames 64 \
+  --hidden_size 256 \
+  --no_mlflow
+```
+
+The MediaPipe route saves:
+
+```text
+artifacts/models/karsl_mediapipe_bilstm_best.pt
+artifacts/models/karsl_mediapipe_bilstm_last.pt
+```
+
+The API inference path still expects the raw-frame ResNet checkpoint today. Use the MediaPipe checkpoint for training/evaluation evidence first; API inference support for the MediaPipe KArSL model can be added after the checkpoint format and CSV feature dimension are confirmed.
 
 ## Google Colab Training
 
@@ -444,6 +533,60 @@ Detach from `tmux` with `Ctrl+B`, then `D`. Reattach with:
 ```bash
 tmux attach -t arsl-train
 ```
+
+### VM Workflow For The OneDrive MediaPipe Dataset
+
+Because the dataset is already in OneDrive and your local machine does not have enough space, use the cloud as the staging area:
+
+1. On the Google Cloud VM, install `rclone`.
+2. Configure `rclone` with access to the shared OneDrive folder.
+3. Copy the MediaPipe Pose folder into a Google Cloud Storage bucket.
+4. Copy the files from the bucket to the VM training disk.
+5. Run the MediaPipe CSV preparation and training scripts above.
+
+Example commands on the VM:
+
+```bash
+# One-time bucket creation from your local terminal or Cloud Shell
+gcloud storage buckets create gs://YOUR_BUCKET_NAME --location=us-central1
+
+# On the VM
+sudo apt-get update
+sudo apt-get install -y rclone tmux
+rclone config
+
+# Copy from OneDrive remote into GCS.
+# Replace onedrive_remote with the name you set in rclone.
+rclone copy "onedrive_remote:Database_local/KArSL/MediaPipe Pose" \
+  "gcs:YOUR_BUCKET_NAME/karsl/mediapipe_pose" \
+  --progress
+
+# Copy from GCS to fast VM disk for training
+mkdir -p ./data/mediapipe_pose
+gcloud storage cp -r gs://YOUR_BUCKET_NAME/karsl/mediapipe_pose/* ./data/mediapipe_pose/
+
+# Prepare compact sequences
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe \
+  --dry_run
+
+python scripts/phase3_prepare_mediapipe_csv.py \
+  --csv_dir ./data/mediapipe_pose \
+  --output_dir ./outputs/mediapipe
+
+# Train inside tmux so SSH disconnects do not stop training
+tmux new -s karsl-mediapipe
+python scripts/phase3_train_mediapipe_csv.py \
+  --manifest_csv ./outputs/mediapipe/mediapipe_manifest.csv \
+  --use_signer all \
+  --epochs 30 \
+  --batch_size 64 \
+  --num_frames 64 \
+  --no_mlflow
+```
+
+If the VM runs out of memory, reduce `--batch_size` to `32` or `16`. If the prepared sequences are too large for the disk, increase the VM disk size or prepare one signer first with a filtered copy.
 
 ## Demo Script For Presentation
 
