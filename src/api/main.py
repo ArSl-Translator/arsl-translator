@@ -18,7 +18,10 @@ from src.api.auth.router import router as auth_router
 from src.api.database.connection import get_db
 from src.api.database.init_db import create_tables
 from src.api.inference import ModelInference
-from src.api.karsl_mediapipe_inference import KArSLMediaPipeInference
+from src.api.karsl_mediapipe_inference import (
+    HAND_LANDMARKER_MODEL_PATH,
+    KArSLMediaPipeInference,
+)
 from src.api.models.user import User
 from src.utils.generate_audio import generate_all_audio
 
@@ -201,6 +204,7 @@ def health():
         "model_loaded": bool(model_registry),
         "models": models,
         "mediapipe_pose_model_available": mediapipe_model_available(),
+        "mediapipe_hand_model_available": os.path.isfile(HAND_LANDMARKER_MODEL_PATH),
     }
 
 

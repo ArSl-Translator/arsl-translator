@@ -17,6 +17,14 @@ MEDIAPIPE_MODEL_PATH = os.getenv(
     "MEDIAPIPE_MODEL_PATH",
     "./mediapipe_models/pose_landmarker_full.task",
 )
+HAND_LANDMARKER_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
+    "hand_landmarker/float16/1/hand_landmarker.task"
+)
+HAND_LANDMARKER_MODEL_PATH = os.getenv(
+    "HAND_LANDMARKER_MODEL_PATH",
+    "./mediapipe_models/hand_landmarker.task",
+)
 
 
 POSE_POINTS = [
@@ -92,6 +100,11 @@ class KArSLMediaPipeInference:
         checkpoint = self._load_checkpoint(model_path)
         ckpt_args = checkpoint.get("args", {}) if isinstance(checkpoint, dict) else {}
         self.input_dim = int(input_dim or checkpoint.get("input_dim") or ckpt_args.get("input_dim") or 108)
+        self.swap_hands = os.getenv("KARSL_MEDIAPIPE_SWAP_HANDS", "false").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
 
         self.model = LandmarkBiLSTMClassifier(
             input_dim=self.input_dim,
@@ -103,8 +116,6 @@ class KArSLMediaPipeInference:
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.to(self.device)
         self.model.eval()
-
-        self._warned_hand_fallback = False
 
     def _get_pose_landmarker(self):
         if not Path(MEDIAPIPE_MODEL_PATH).is_file():
@@ -129,6 +140,29 @@ class KArSLMediaPipeInference:
             output_segmentation_masks=False,
         )
         return mp_vision.PoseLandmarker.create_from_options(options)
+
+    def _get_hand_landmarker(self):
+        if not Path(HAND_LANDMARKER_MODEL_PATH).is_file():
+            raise FileNotFoundError(
+                f"MediaPipe hand model not found at {HAND_LANDMARKER_MODEL_PATH}. "
+                f"Download it from {HAND_LANDMARKER_MODEL_URL}"
+            )
+
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision as mp_vision
+        from mediapipe.tasks.python.vision.core.vision_task_running_mode import (
+            VisionTaskRunningMode,
+        )
+
+        options = mp_vision.HandLandmarkerOptions(
+            base_options=mp_python.BaseOptions(model_asset_path=HAND_LANDMARKER_MODEL_PATH),
+            running_mode=VisionTaskRunningMode.IMAGE,
+            num_hands=2,
+            min_hand_detection_confidence=0.35,
+            min_hand_presence_confidence=0.35,
+            min_tracking_confidence=0.35,
+        )
+        return mp_vision.HandLandmarker.create_from_options(options)
 
     def _load_checkpoint(self, model_path: str):
         try:
@@ -157,28 +191,62 @@ class KArSLMediaPipeInference:
             return [0.0, 0.0]
         return [(right[0] + left[0]) / 2.0, (right[1] + left[1]) / 2.0]
 
-    def _frame_to_features(self, result) -> np.ndarray:
+    def _hand_features(self, landmarks) -> List[float]:
         values: List[float] = []
-        pose = result.pose_landmarks[0] if result.pose_landmarks else None
+        for _, idx in HAND_ORDER:
+            values.extend(self._point_xy(landmarks, idx))
+        return values
+
+    def _hand_label(self, hand_result, idx: int) -> str:
+        try:
+            handedness = hand_result.handedness[idx]
+            if not handedness:
+                return ""
+            category = handedness[0]
+            label = getattr(category, "category_name", "") or getattr(category, "display_name", "")
+            return str(label).lower()
+        except Exception:
+            return ""
+
+    def _split_hands(self, hand_result):
+        right_hand = None
+        left_hand = None
+        detected = list(getattr(hand_result, "hand_landmarks", []) or [])
+
+        for idx, landmarks in enumerate(detected):
+            label = self._hand_label(hand_result, idx)
+            if "right" in label and right_hand is None:
+                right_hand = landmarks
+            elif "left" in label and left_hand is None:
+                left_hand = landmarks
+
+        if detected and (right_hand is None or left_hand is None):
+            ordered = sorted(detected, key=lambda hand: hand[0].x if hand else 0.0)
+            if len(ordered) == 1:
+                if right_hand is None and left_hand is None:
+                    # In front-facing videos, the subject's right hand normally
+                    # appears on the left side of the image.
+                    right_hand = ordered[0]
+            else:
+                right_hand = right_hand or ordered[0]
+                left_hand = left_hand or ordered[-1]
+
+        if self.swap_hands:
+            right_hand, left_hand = left_hand, right_hand
+
+        return right_hand, left_hand
+
+    def _frame_to_features(self, pose_result, hand_result) -> np.ndarray:
+        values: List[float] = []
+        pose = pose_result.pose_landmarks[0] if pose_result.pose_landmarks else None
 
         for _, idx in POSE_POINTS:
             values.extend(self._point_xy(pose, idx))
         values.extend(self._neck_xy(pose))
 
-        if not self._warned_hand_fallback:
-            print(
-                "Warning: KArSL MediaPipe runtime is using the Tasks PoseLandmarker "
-                "available in this environment. Hand features are zero-filled; "
-                "video inference may be weaker than CSV evaluation until a hand "
-                "landmarker/holistic runtime is added."
-            )
-            self._warned_hand_fallback = True
-
-        # The training CSV has 21 right-hand and 21 left-hand keypoints after the
-        # body/neck features. This Tasks runtime only provides pose landmarks, so
-        # keep the expected 108-feature shape by zero-filling hand coordinates.
-        values.extend([0.0] * (len(HAND_ORDER) * 2))
-        values.extend([0.0] * (len(HAND_ORDER) * 2))
+        right_hand, left_hand = self._split_hands(hand_result)
+        values.extend(self._hand_features(right_hand))
+        values.extend(self._hand_features(left_hand))
 
         arr = np.asarray(values, dtype=np.float32)
         if arr.shape[0] != self.input_dim:
@@ -194,12 +262,13 @@ class KArSLMediaPipeInference:
         features = []
         import mediapipe as mp
 
-        with self._get_pose_landmarker() as landmarker:
+        with self._get_pose_landmarker() as pose_landmarker, self._get_hand_landmarker() as hand_landmarker:
             for frame in frames:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-                result = landmarker.detect(mp_img)
-                features.append(self._frame_to_features(result))
+                pose_result = pose_landmarker.detect(mp_img)
+                hand_result = hand_landmarker.detect(mp_img)
+                features.append(self._frame_to_features(pose_result, hand_result))
 
         arr = np.stack(features, axis=0)
         indices = _uniform_sample_indices(arr.shape[0], self.num_frames)
