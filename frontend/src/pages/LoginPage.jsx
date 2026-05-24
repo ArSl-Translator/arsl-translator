@@ -76,11 +76,8 @@ export default function LoginPage() {
           <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase text-gray-500">
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              Secured project access
+              Secured Access
             </div>
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              Sign in to use prediction history, analytics, video upload, webcam recognition, and the offline chat page.
-            </p>
           </div>
 
           <p className="mt-5 text-center text-sm text-gray-500">

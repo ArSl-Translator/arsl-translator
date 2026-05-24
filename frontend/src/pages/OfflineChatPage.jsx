@@ -1,5 +1,7 @@
 import React from 'react';
-import { Bluetooth, Database, FileArchive, MessageSquare, RadioTower, Smartphone, WifiOff } from 'lucide-react';
+import { Bluetooth, Database, Download, FileArchive, MessageSquare, RadioTower, ShieldCheck, Smartphone, WifiOff } from 'lucide-react';
+
+const apkUrl = '/downloads/accessible-chat.apk';
 
 const features = [
   {
@@ -51,6 +53,14 @@ const OfflineChatPage = () => {
             <code className="mt-4 block rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
               offline-chat-android/
             </code>
+            <a
+              href={apkUrl}
+              download="accessible-chat.apk"
+              className="btn-primary mt-4 w-full"
+            >
+              <Download className="h-4 w-4" />
+              Download Android APK
+            </a>
           </div>
         </div>
 
@@ -81,15 +91,20 @@ const OfflineChatPage = () => {
         <div className="card">
           <div className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-gray-600" />
-            <h3 className="text-lg font-bold text-gray-950">APK build path</h3>
+            <h3 className="text-lg font-bold text-gray-950">Install on Android</h3>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-600">
-            Open the Android folder in Android Studio, run a debug build, then install the generated APK on two
-            Android devices for Bluetooth testing.
+            Open this page from an Android phone and download the APK. Android may ask you to allow installation
+            from the browser or file manager before the app can be installed.
           </p>
-          <code className="mt-4 block rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-            offline-chat-android/app/build/outputs/apk/debug/app-debug.apk
-          </code>
+          <a href={apkUrl} download="accessible-chat.apk" className="btn-primary mt-4">
+            <Download className="h-4 w-4" />
+            Download APK
+          </a>
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            Install the same APK on both phones, then use one device as the host and the other as the helper.
+          </div>
         </div>
       </div>
     </div>

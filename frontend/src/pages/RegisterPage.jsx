@@ -79,16 +79,6 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase text-gray-500">
-              <Database className="h-4 w-4 text-blue-600" />
-              Persistent history
-            </div>
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              Your account stores prediction history and dashboard analytics for the demo.
-            </p>
-          </div>
-
           <p className="mt-5 text-center text-sm text-gray-500">
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-gray-950 hover:underline">
