@@ -44,7 +44,7 @@ export default function LoginPage() {
               <LogIn className="h-5 w-5" />
             </div>
             <div>
-              <p className="section-title">Welcome back</p>
+              <p className="section-title">Welcome back!</p>
               <h2 className="mt-1 text-xl font-bold tracking-tight text-gray-950">Sign in</h2>
             </div>
           </div>
