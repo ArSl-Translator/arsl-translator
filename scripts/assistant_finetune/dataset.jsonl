@@ -1,0 +1,75 @@
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا الم بطني قوي", "output": "أشعر بألم شديد في بطني."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "دكتور انا ما فهم كلام دواء", "output": "دكتور، لم أفهم تعليمات الدواء. من فضلك اشرحها لي."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "راسي يدور ما قادر اوقف", "output": "أشعر بدوار شديد ولا أستطيع الوقوف."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا محتاج مساعدة", "output": "أحتاج إلى مساعدة من فضلك."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "ما عارف وين الحمام", "output": "لا أعرف أين الحمام. من فضلك أرشدني."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "وجع كتير بالرجل", "output": "أشعر بألم شديد في رجلي."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا ما نمت امبارح الم", "output": "لم أنم البارحة بسبب الألم."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "دكتور الدواء ما نفع", "output": "دكتور، الدواء لم يفِد. الألم لا يزال موجوداً."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا خايف من العملية", "output": "أنا خائف من العملية الجراحية."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "ما فاهم الورقة", "output": "لم أفهم ما هو مكتوب في الورقة."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "عندي سكر وضغط", "output": "لدي مرض السكري وضغط الدم."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "ما اكلت من الصبح", "output": "لم أتناول الطعام منذ الصباح."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "دكتور تعبان كتير اليوم", "output": "دكتور، أشعر بتعب شديد اليوم."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "ما قادر اتنفس صح", "output": "أجد صعوبة في التنفس بشكل طبيعي."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "وجعني راسي من امس", "output": "أعاني من صداع منذ أمس."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "الجرح ما راح ونزل دم", "output": "الجرح لم يلتئم وما زال ينزف."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا حساسية من دواء", "output": "لدي حساسية من أحد الأدوية."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "دكتور الكحة ما وقفت", "output": "دكتور، السعال لم يتوقف حتى الآن."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا مش شايف صح بعيني", "output": "أعاني من ضعف في النظر."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "اجا دوار وقعت", "output": "أصابني دوار فجأة وسقطت."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "الدكتور قال اشرب دوا بس ما فهمت", "output": "أخبرني الطبيب بأخذ دواء لكنني لم أفهم التعليمات."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "بطني وجعني بعد الاكل", "output": "أشعر بألم في بطني بعد الأكل."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "انا مش عارف وين اروح", "output": "لا أعرف إلى أين يجب أن أذهب."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "الممرضة قالت شي ما فهمت", "output": "قالت لي الممرضة شيئاً لم أفهمه."}
+{"mode": "deaf_to_hearing", "language": "ar", "input": "حرارتي عالية من امس", "output": "لدي حرارة مرتفعة منذ أمس."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "stomach hurt bad cant stand", "output": "I have severe stomach pain and I cannot stand up."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "doctor i no understand medicine words", "output": "Doctor, I did not understand the medicine instructions. Please explain them more simply."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "head spinning fall down", "output": "I feel very dizzy and I fell down."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "i need help please", "output": "I need help, please."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "pain leg very bad", "output": "I have very bad pain in my leg."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "no sleep last night pain", "output": "I could not sleep last night because of the pain."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "medicine not work still hurt", "output": "The medicine did not work. I am still in pain."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "scared operation", "output": "I am scared about the operation."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "not understand paper doctor gave", "output": "I did not understand the document the doctor gave me."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "allergy medicine have", "output": "I have a medicine allergy."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "chest tight cannot breathe good", "output": "My chest feels tight and I am having difficulty breathing."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "bleeding not stop", "output": "The bleeding has not stopped."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "fever since yesterday", "output": "I have had a fever since yesterday."}
+{"mode": "deaf_to_hearing", "language": "en", "input": "eyes blurry cannot see clear", "output": "My vision is blurry and I cannot see clearly."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "يجب أن تتناول الدواء بعد الأكل مرتين يومياً وإذا استمر الألم راجع الطبيب", "output": "خذ الدواء بعد الأكل مرتين في اليوم. إذا بقي الألم، راجع الطبيب."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "موعدك القادم سيكون بعد أسبوعين في العيادة الخارجية في الطابق الثالث وعليك إحضار نتائج التحاليل والأشعة معك", "output": "موعدك بعد أسبوعين. العيادة الخارجية، الطابق الثالث. أحضر نتائج التحاليل والأشعة."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "يُرجى الإشارة إلى أي حساسية دوائية لديك قبل البدء بالعلاج لأن بعض الأدوية قد تسبب تفاعلات خطيرة", "output": "قل للطبيب إذا عندك حساسية من أي دواء قبل العلاج."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "نتائج تحاليلك أظهرت ارتفاعاً طفيفاً في مستوى السكر في الدم ولكنه ليس خطيراً في الوقت الحالي", "output": "السكر في دمك مرتفع قليلاً. ليس خطيراً الآن."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "يجب عليك الامتناع عن تناول الطعام والشراب لمدة ست ساعات قبل إجراء العملية الجراحية", "output": "لا تأكل ولا تشرب لمدة 6 ساعات قبل العملية."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "الجرح يحتاج إلى تغيير الضمادة كل يوم وتنظيفه بالمحلول الملحي المعقم", "output": "غيّر الضمادة كل يوم. نظّف الجرح بالمحلول المعقم."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "يُنصح بالراحة التامة في المنزل لمدة ثلاثة أيام وتجنب الجهد الجسدي الشديد", "output": "ارتح في البيت 3 أيام. لا تبذل مجهوداً كبيراً."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "إذا ارتفعت الحرارة فوق 38.5 درجة أو ظهرت أعراض جديدة يرجى التوجه فوراً إلى قسم الطوارئ", "output": "إذا الحرارة أكثر من 38.5 أو ظهرت أعراض جديدة، اذهب فوراً للطوارئ."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "تم تحديد موعد الأشعة ليوم الخميس الساعة العاشرة صباحاً في قسم الأشعة بالطابق الأول", "output": "موعد الأشعة: الخميس الساعة 10 صباحاً. الطابق الأول."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "الحبوب الصفراء للألم والحبوب البيضاء لضغط الدم وكلاهما يؤخذ مع وجبة الإفطار", "output": "الحبة الصفراء للألم. الحبة البيضاء للضغط. كلاهما مع الفطور."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "لا تقود السيارة أو تستخدم الآلات الثقيلة بعد تناول هذا الدواء لأنه قد يسبب النعاس", "output": "لا تقود السيارة بعد هذا الدواء. قد يسبب نوماً."}
+{"mode": "hearing_to_deaf", "language": "ar", "input": "يجب إجراء تحليل الدم الدوري كل ثلاثة أشهر لمتابعة مستوى الكوليسترول والسكر", "output": "اعمل تحليل دم كل 3 أشهر. لمتابعة السكر والكوليسترول."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "You must take the medicine after meals twice a day and if the pain persists please consult your doctor immediately", "output": "Take the medicine after meals two times a day. If pain continues, see the doctor."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "Your next appointment is in two weeks at the outpatient clinic on the third floor please bring your lab results and x-rays", "output": "Appointment in 2 weeks. Outpatient clinic, floor 3. Bring lab results and x-rays."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "Please let us know about any medication allergies before we begin treatment as some medicines can cause serious reactions", "output": "Tell us if you are allergic to any medicine before treatment starts."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "Do not eat or drink anything for six hours before your surgery as your stomach must be completely empty", "output": "Do not eat or drink for 6 hours before surgery."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "The yellow pills are for pain and the white pills are for blood pressure and both should be taken with breakfast", "output": "Yellow pill for pain. White pill for blood pressure. Take both with breakfast."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "Rest at home for three days and avoid heavy physical activity to allow the wound to heal properly", "output": "Rest at home for 3 days. Do not do heavy activity."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "If your temperature goes above 38.5 degrees or you develop new symptoms please go to the emergency room immediately", "output": "If fever is above 38.5 or new symptoms appear, go to emergency now."}
+{"mode": "hearing_to_deaf", "language": "en", "input": "Do not drive or operate heavy machinery after taking this medication as it may cause drowsiness", "output": "Do not drive after taking this medicine. It may make you sleepy."}
+{"mode": "suggestions", "language": "ar", "input": "انا في المستشفى واريد اسأل عن موعدي", "output": "1. متى موعدي؟\n2. أين أنتظر؟\n3. هل تأخر موعدي؟\n4. من فضلك أخبرني عندما يحين دوري."}
+{"mode": "suggestions", "language": "ar", "input": "عندي سؤال عن الدواء", "output": "1. متى آخذ الدواء؟\n2. كم مرة في اليوم؟\n3. هل آخذه قبل الأكل أم بعده؟\n4. من فضلك اكتب التعليمات."}
+{"mode": "suggestions", "language": "ar", "input": "عندي ألم وما عارف شو اعمل", "output": "1. أشعر بألم شديد.\n2. أحتاج مساعدة من فضلك.\n3. أين الطبيب؟\n4. هل يمكنك أن تشرح لي ماذا أفعل؟"}
+{"mode": "suggestions", "language": "ar", "input": "ما فهمت الدكتور", "output": "1. لم أفهم ما قاله الطبيب.\n2. هل يمكنك الكتابة من فضلك؟\n3. من فضلك اشرح بطريقة أبسط.\n4. هل يمكن أن يعيد الطبيب الشرح؟"}
+{"mode": "suggestions", "language": "ar", "input": "اريد احكي مع الممرضة", "output": "1. أريد التحدث مع الممرضة.\n2. هل يمكنني رؤية الممرضة؟\n3. أحتاج مساعدة الممرضة من فضلك.\n4. متى ستأتي الممرضة؟"}
+{"mode": "suggestions", "language": "ar", "input": "انا خايف من التحليل", "output": "1. أنا خائف من إجراء التحليل.\n2. هل سيكون مؤلماً؟\n3. كم من الوقت يستغرق؟\n4. هل يمكن شرح الخطوات لي؟"}
+{"mode": "suggestions", "language": "ar", "input": "اريد ارجع البيت", "output": "1. هل يمكنني الذهاب إلى البيت؟\n2. متى يمكنني الخروج؟\n3. ماذا يجب أن أفعل قبل الخروج؟\n4. هل أنا جاهز للخروج؟"}
+{"mode": "suggestions", "language": "ar", "input": "ما عندي مياه", "output": "1. أحتاج ماء من فضلك.\n2. أين يمكنني الحصول على ماء؟\n3. هل يمكنني شرب الماء الآن؟"}
+{"mode": "suggestions", "language": "ar", "input": "حرارتي عالية", "output": "1. حرارتي مرتفعة.\n2. أشعر بحرارة شديدة.\n3. هل يمكنكم قياس حرارتي؟\n4. أحتاج دواء للحرارة."}
+{"mode": "suggestions", "language": "ar", "input": "انا ما نمت وتعبان", "output": "1. لم أنم الليلة.\n2. أشعر بتعب شديد.\n3. هل يمكنني الحصول على شيء للنوم؟\n4. الألم يمنعني من النوم."}
+{"mode": "suggestions", "language": "en", "input": "I am at the hospital and want to ask about my appointment", "output": "1. When is my appointment?\n2. Where should I wait?\n3. Has my appointment been delayed?\n4. Please tell me when it is my turn."}
+{"mode": "suggestions", "language": "en", "input": "I have a question about my medicine", "output": "1. When should I take the medicine?\n2. How many times a day?\n3. Should I take it before or after food?\n4. Please write the instructions."}
+{"mode": "suggestions", "language": "en", "input": "I have pain and do not know what to do", "output": "1. I am in pain.\n2. I need help please.\n3. Where is the doctor?\n4. Can you explain what I should do?"}
+{"mode": "suggestions", "language": "en", "input": "I did not understand the doctor", "output": "1. I did not understand what the doctor said.\n2. Can you write it down please?\n3. Please explain more simply.\n4. Can the doctor explain again?"}
+{"mode": "suggestions", "language": "en", "input": "I want to go home", "output": "1. Can I go home?\n2. When can I leave?\n3. What do I need to do before leaving?\n4. Am I ready to be discharged?"}
+{"mode": "suggestions", "language": "en", "input": "I am scared about the operation", "output": "1. I am scared about the operation.\n2. Will it be painful?\n3. How long will it take?\n4. Can you explain the steps to me?"}
