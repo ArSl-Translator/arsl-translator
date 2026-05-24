@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arsl_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arsl_api_prod
+    restart: unless-stopped
+    shm_size: "2gb"
+    expose:
+      - "8000"
+    environment:
+      DATASET_ROOT: /app/data/raw/KArSL
+      LABELS_XLSX: /app/data/raw/labels/KARSL-502_Labels.xlsx
+      OUTPUT_DIR: /app/outputs/index
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      CORS_ALLOW_ORIGINS: https://${APP_DOMAIN},http://${APP_DOMAIN}
+      MODEL_PATH: /app/models/baseline_resnet18_bilstm_last.pt
+      KARSL_MEDIAPIPE_MODEL_PATH: /app/models/karsl_mediapipe_bilstm_best.pt
+      ARABSIGN_MODEL_PATH: /app/models/arabsign_best_model.pt
+      MEDIAPIPE_MODEL_PATH: /app/mediapipe_models/pose_landmarker_full.task
+      HAND_LANDMARKER_MODEL_PATH: /app/mediapipe_models/hand_landmarker.task
+      KARSL_MEDIAPIPE_MIRROR_INPUT: ${KARSL_MEDIAPIPE_MIRROR_INPUT:-true}
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./models:/app/models
+      - ./outputs:/app/outputs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: arsl_frontend_prod
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_started
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: arsl_caddy_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - api
+
+volumes:
+  pgdata_prod:
+  caddy_data:
+  caddy_config:

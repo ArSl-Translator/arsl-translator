@@ -9,6 +9,7 @@ build/
 .venv/
 venv/
 .env
+.env.production
 
 # ---- Jupyter / notebooks ----
 .ipynb_checkpoints/
@@ -25,6 +26,7 @@ data/**/*
 artifacts/
 outputs/
 models/*.pt
+*.tgz
 
 # If you want to keep empty folders tracked:
 !artifacts/.gitkeep

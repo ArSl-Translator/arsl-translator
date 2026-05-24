@@ -27,14 +27,22 @@ from src.utils.generate_audio import generate_all_audio
 
 app = FastAPI(title="ArSL Translator API", version="0.2.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+def _cors_origins() -> List[str]:
+    configured = os.environ.get("CORS_ALLOW_ORIGINS", "")
+    defaults = [
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8080",
         "null",
-    ],
+    ]
+    if not configured:
+        return defaults
+    return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
