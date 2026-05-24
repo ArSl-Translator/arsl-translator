@@ -12,7 +12,7 @@ RUN mkdir -p /app/mediapipe_models \
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task" \
   && wget -q -O /app/mediapipe_models/hand_landmarker.task \
     "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
-
+ 
 # Layer 1: heavy, rarely-changing deps (torch, opencv, numpy, etc.)
 # This layer is cached and won't re-download when you only change requirements.txt
 COPY requirements.base.txt .
