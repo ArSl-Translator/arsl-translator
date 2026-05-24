@@ -118,7 +118,7 @@ def _first_existing(candidates: List[str]) -> Optional[str]:
 
 
 def normalize_model_name(model: Optional[str]) -> str:
-    selected = (model or "karsl").strip().lower()
+    selected = (model or "karsl_mediapipe").strip().lower()
     aliases = {
         "default": "karsl",
         "arsl": "karsl",
@@ -220,7 +220,7 @@ def health():
 async def predict_video(
     file: UploadFile = File(...),
     top_k: int = 5,
-    model: str = "karsl",
+    model: str = "karsl_mediapipe",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -246,7 +246,7 @@ async def predict_video(
 class FramesRequest(BaseModel):
     frames: List[str]
     top_k: int = 5
-    model: str = "karsl"
+    model: str = "karsl_mediapipe"
 
 
 @app.post("/predict/frames")

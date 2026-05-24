@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Circle, Layers, Play, Square } from 'lucide-react';
+import { Camera, Circle, Play, Square } from 'lucide-react';
 import { predictFrames } from '../services/api';
+import ModelSelector from './ModelSelector';
 import PredictionResults from './PredictionResults';
 
 const WebcamCapture = () => {
@@ -146,6 +147,13 @@ const WebcamCapture = () => {
     }
   };
 
+  const handleModelChange = (nextModel) => {
+    setModel(nextModel);
+    localStorage.setItem('arsl_selected_model', nextModel);
+    setResult(null);
+    setError(null);
+  };
+
   const startRecording = () => {
     if (!stream) {
       setError('Start the webcam first.');
@@ -197,27 +205,11 @@ const WebcamCapture = () => {
         </div>
 
         <div className="space-y-5 p-6">
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Layers className="h-4 w-4 text-gray-400" />
-            Recognition model
-          </label>
-          <select
-            value={model}
-            onChange={(e) => {
-              setModel(e.target.value);
-              localStorage.setItem('arsl_selected_model', e.target.value);
-              setResult(null);
-              setError(null);
-            }}
-            disabled={isRecording || loading}
-            className="input font-semibold disabled:opacity-60"
-          >
-            <option value="karsl_mediapipe">KArSL MediaPipe classifier</option>
-            <option value="karsl">KArSL raw-frame baseline</option>
-            <option value="arabsign">ArabSign pose translator</option>
-          </select>
-        </div>
+        <ModelSelector
+          value={model}
+          onChange={handleModelChange}
+          disabled={isRecording || loading}
+        />
 
         <div className="relative mb-4 overflow-hidden rounded-lg bg-gray-950">
           {!stream ? (

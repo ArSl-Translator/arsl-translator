@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { ArrowRight, FileVideo, Layers, Upload, Video, X } from 'lucide-react';
+import { ArrowRight, FileVideo, Upload, Video, X } from 'lucide-react';
 import { predictVideo } from '../services/api';
+import ModelSelector from './ModelSelector';
 import PredictionResults from './PredictionResults';
 
 const VideoUpload = () => {
@@ -30,6 +31,13 @@ const VideoUpload = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleModelChange = (nextModel) => {
+    setModel(nextModel);
+    localStorage.setItem('arsl_selected_model', nextModel);
+    setResult(null);
+    setError(null);
   };
 
   const handlePredict = async () => {
@@ -67,26 +75,7 @@ const VideoUpload = () => {
         </div>
 
         <div className="space-y-5 p-6">
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Layers className="h-4 w-4 text-gray-400" />
-              Recognition model
-            </label>
-            <select
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                localStorage.setItem('arsl_selected_model', e.target.value);
-                setResult(null);
-                setError(null);
-              }}
-              className="input font-semibold"
-            >
-              <option value="karsl_mediapipe">KArSL MediaPipe classifier</option>
-              <option value="karsl">KArSL raw-frame baseline</option>
-              <option value="arabsign">ArabSign pose translator</option>
-            </select>
-          </div>
+          <ModelSelector value={model} onChange={handleModelChange} disabled={loading} />
 
           <div
             className={`rounded-lg border-2 border-dashed p-10 text-center transition-all duration-200 ${

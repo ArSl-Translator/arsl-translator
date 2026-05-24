@@ -1,7 +1,8 @@
 import React from 'react';
-import { Bluetooth, Database, Download, FileArchive, MessageSquare, RadioTower, ShieldCheck, Smartphone, WifiOff } from 'lucide-react';
+import { Bluetooth, Database, Download, ExternalLink, FileArchive, MessageSquare, PlayCircle, RadioTower, ShieldCheck, Smartphone, WifiOff } from 'lucide-react';
 
 const apkUrl = '/downloads/accessible-chat.apk';
+const demoUrl = 'https://canva.link/66ztb1hat1s22fr';
 
 const features = [
   {
@@ -58,6 +59,15 @@ const OfflineChatPage = () => {
               <Download className="h-4 w-4" />
               Download Android APK
             </a>
+            <a
+              href={demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary mt-3 w-full"
+            >
+              <PlayCircle className="h-4 w-4" />
+              Watch two-phone demo
+            </a>
           </div>
         </div>
 
@@ -97,6 +107,15 @@ const OfflineChatPage = () => {
           <a href={apkUrl} download="accessible-chat.apk" className="btn-primary mt-4">
             <Download className="h-4 w-4" />
             Download APK
+          </a>
+          <a
+            href={demoUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary mt-3"
+          >
+            <ExternalLink className="h-4 w-4" />
+            View app demo
           </a>
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0" />

@@ -32,7 +32,7 @@ export const healthCheck = async () => {
   return response.data;
 };
 
-export const predictVideo = async (file, topK = 5, model = 'karsl') => {
+export const predictVideo = async (file, topK = 5, model = 'karsl_mediapipe') => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -45,7 +45,7 @@ export const predictVideo = async (file, topK = 5, model = 'karsl') => {
   return response.data;
 };
 
-export const predictFrames = async (frames, topK = 5, model = 'karsl') => {
+export const predictFrames = async (frames, topK = 5, model = 'karsl_mediapipe') => {
   const response = await api.post('/predict/frames', {
     frames,
     top_k: topK,
