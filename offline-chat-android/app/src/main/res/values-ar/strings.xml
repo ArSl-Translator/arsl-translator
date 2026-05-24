@@ -1,40 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">محادثة سهلة</string>
-    <string name="home_title">محادثة سهلة</string>
-    <string name="home_subtitle">محادثة بلوتوث بدون إنترنت للأشخاص الذين لا يستطيعون الكلام أو السمع بسهولة.</string>
-    <string name="role_assisted">أحتاج مساعدة</string>
-    <string name="role_assisted_desc">استضافة محادثة قريبة</string>
-    <string name="role_helper">أريد المساعدة</string>
-    <string name="role_helper_desc">الاتصال بشخص قريب</string>
-    <string name="messages">الرسائل</string>
-    <string name="waiting_for_connection">في انتظار الاتصال...</string>
-    <string name="connected_to">متصل بـ %1$s</string>
-    <string name="disconnected">غير متصل</string>
-    <string name="connection_lost">انقطع الاتصال</string>
-    <string name="find_device">البحث عن جهاز</string>
-    <string name="paired_devices">الأجهزة المقترنة</string>
-    <string name="available_devices">الأجهزة المتاحة</string>
-    <string name="scan">بحث</string>
-    <string name="stop_scan">إيقاف البحث</string>
-    <string name="no_devices">لم يتم العثور على أجهزة. قم بإقران الهاتفين من إعدادات البلوتوث ثم حاول مرة أخرى.</string>
-    <string name="no_conversations">لا توجد محادثات بعد. عندما يتصل بك شخص ستظهر محادثته هنا.</string>
-    <string name="your_device_ready">جهازك جاهز</string>
-    <string name="ready_desc">اترك هذه الشاشة مفتوحة حتى يستطيع شخص قريب الاتصال بك.</string>
-    <string name="type_message">اكتب رسالة...</string>
-    <string name="say_hello">لا توجد رسائل بعد. قل مرحباً.</string>
-    <string name="attach">إرفاق</string>
-    <string name="choose_image">صورة</string>
-    <string name="take_photo">كاميرا</string>
-    <string name="choose_video">فيديو</string>
-    <string name="record_audio">صوت</string>
-    <string name="choose_file">ملف</string>
-    <string name="cancel">إلغاء</string>
+    <string name="appname">محادثة سهلة</string>
+
+    <!-- Home Screen -->
+    <string name="hometitle">محادثة سهلة</string>
+    <string name="homesubtitle">نسهّل التواصل\nللجميع</string>
+    <string name="homeselectrole">كيف تريد الاتصال؟</string>
+    <string name="roleassisted">أحتاج مساعدة</string>
+    <string name="roleassisteddesc">للأشخاص ذوي صعوبات السمع أو النطق</string>
+    <string name="roleassistant">أريد المساعدة</string>
+    <string name="roleassistantdesc">تواصل مع شخص يحتاج مساعدة</string>
+    <string name="homeinstructions">الشخص الذي يحتاج مساعدة يستضيف المحادثة.\nالمساعدون يتصلون عبر البلوتوث.</string>
+
+    <!-- Device List Screen -->
+    <string name="devicelisttitle">ابحث عن شخص للمساعدة</string>
+    <string name="devicelistsubtitle">اختر جهازاً للاتصال</string>
+    <string name="scandevices">البحث عن أجهزة</string>
+    <string name="stopscanning">إيقاف البحث</string>
+    <string name="paireddevices">الأجهزة المقترنة</string>
+    <string name="availabledevices">الأجهزة المتاحة</string>
+    <string name="nodevicesfound">لم يتم العثور على أجهزة.\n\nتأكد من:\n• تفعيل البلوتوث على كلا الجهازين\n• فتح التطبيق على جهاز الشخص الآخر\n• اقتران الأجهزة في إعدادات البلوتوث</string>
+
+    <!-- Conversation List Screen -->
+    <string name="messagestitle">الرسائل</string>
+    <string name="devicediscoverable">جهازك قابل للاكتشاف</string>
+    <string name="devicediscoverabledesc">يمكن للآخرين الاتصال بك عبر البلوتوث</string>
+    <string name="recentconversations">المحادثات الأخيرة</string>
+    <string name="noconversations">لا توجد محادثات بعد.\n\nعندما يتصل بك شخص ما،\nستظهر رسائله هنا.</string>
+    <string name="nomessagesyet">لا توجد رسائل بعد</string>
+
+    <!-- Chat Screen -->
+    <string name="typemessage">اكتب رسالة…</string>
+    <string name="waitingconnection">في انتظار الاتصال…</string>
+    <string name="nomessagesconnected">لا توجد رسائل بعد.\nقل مرحباً! 👋</string>
+    <string name="nomessageswaiting">في انتظار الاتصال…\n\nستظهر الرسائل هنا بعد الاتصال.</string>
     <string name="send">إرسال</string>
-    <string name="recording">جاري التسجيل...</string>
-    <string name="media_image">صورة</string>
-    <string name="media_audio">صوت</string>
-    <string name="media_video">فيديو</string>
-    <string name="media_file">ملف</string>
-    <string name="permissions_required">أذونات البلوتوث والوسائط والكاميرا والميكروفون مطلوبة للتجربة الكاملة.</string>
+    <string name="back">رجوع</string>
+
+    <!-- Media -->
+    <string name="attachmedia">إرفاق وسائط</string>
+    <string name="takephoto">التقاط صورة</string>
+    <string name="chooseimage">اختيار صورة</string>
+    <string name="recordvideo">تسجيل فيديو</string>
+    <string name="choosevideo">اختيار فيديو</string>
+    <string name="recordaudio">رسالة صوتية</string>
+    <string name="choosefile">اختيار ملف</string>
+    <string name="cancel">إلغاء</string>
+    <string name="recording">جاري التسجيل…</string>
+    <string name="taptostop">اضغط للإيقاف</string>
+    <string name="audiomessage">رسالة صوتية</string>
+    <string name="videomessage">فيديو</string>
+    <string name="filemessage">ملف</string>
+    <string name="imagemessage">صورة</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="close">إغلاق</string>
+    <string name="fullimage">صورة كاملة</string>
+
+    <!-- Connection Status -->
+    <string name="statusdisconnected">غير متصل</string>
+    <string name="statusconnecting">جاري الاتصال…</string>
+    <string name="statusconnected">متصل بـ %s</string>
+    <string name="statuswaiting">في انتظار الاتصال…</string>
+    <string name="statusconnectionlost">انقطع الاتصال</string>
+
+    <!-- Errors -->
+    <string name="errorbluetoothrequired">يتطلب هذا التطبيق أذونات البلوتوث</string>
+    <string name="errorcamerarequired">يتطلب إذن الكاميرا</string>
+    <string name="erroraudiorequired">يتطلب إذن الميكروفون</string>
+    <string name="errorstoragerequired">يتطلب إذن التخزين</string>
+
+    <!-- Language -->
+    <string name="language">اللغة</string>
+    <string name="arabic">العربية</string>
+    <string name="english">English</string>
 </resources>

@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AccessibleOfflineChat"
+rootProject.name = "OfflineChat"
 include(":app")

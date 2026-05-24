@@ -1,40 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Accessible Chat</string>
-    <string name="home_title">Accessible Chat</string>
-    <string name="home_subtitle">Offline Bluetooth chat for people who cannot speak or hear easily.</string>
-    <string name="role_assisted">I need assistance</string>
-    <string name="role_assisted_desc">Host a nearby chat session</string>
-    <string name="role_helper">I want to help</string>
-    <string name="role_helper_desc">Connect to someone nearby</string>
-    <string name="messages">Messages</string>
-    <string name="waiting_for_connection">Waiting for connection...</string>
-    <string name="connected_to">Connected to %1$s</string>
-    <string name="disconnected">Disconnected</string>
-    <string name="connection_lost">Connection lost</string>
-    <string name="find_device">Find a Device</string>
-    <string name="paired_devices">Paired devices</string>
-    <string name="available_devices">Available devices</string>
-    <string name="scan">Scan</string>
-    <string name="stop_scan">Stop scanning</string>
-    <string name="no_devices">No devices found. Pair the phones in Android Bluetooth settings, then try again.</string>
-    <string name="no_conversations">No conversations yet. When someone connects, their chat appears here.</string>
-    <string name="your_device_ready">Your device is ready</string>
-    <string name="ready_desc">Keep this screen open so a nearby helper can connect.</string>
-    <string name="type_message">Type a message...</string>
-    <string name="say_hello">No messages yet. Say hello.</string>
-    <string name="attach">Attach</string>
-    <string name="choose_image">Image</string>
-    <string name="take_photo">Camera</string>
-    <string name="choose_video">Video</string>
-    <string name="record_audio">Voice</string>
-    <string name="choose_file">File</string>
-    <string name="cancel">Cancel</string>
+    <string name="appname">Accessible Chat</string>
+
+    <!-- Home Screen -->
+    <string name="hometitle">Accessible Chat</string>
+    <string name="homesubtitle">Bridging communication gaps\nfor everyone</string>
+    <string name="homeselectrole">How would you like to connect?</string>
+    <string name="roleassisted">I need assistance</string>
+    <string name="roleassisteddesc">For users with hearing/speech needs</string>
+    <string name="roleassistant">I want to help</string>
+    <string name="roleassistantdesc">Connect with someone who needs assistance</string>
+    <string name="homeinstructions">Users who need assistance host the chat.\nHelpers connect to them via Bluetooth.</string>
+
+    <!-- Device List Screen -->
+    <string name="devicelisttitle">Find Someone to Help</string>
+    <string name="devicelistsubtitle">Select a device to connect</string>
+    <string name="scandevices">Scan for Devices</string>
+    <string name="stopscanning">Stop Scanning</string>
+    <string name="paireddevices">Paired Devices</string>
+    <string name="availabledevices">Available Devices</string>
+    <string name="nodevicesfound">No devices found.\n\nMake sure:\n• Bluetooth is enabled on both devices\n• The person you want to help has the app open\n• Devices are paired in system Bluetooth settings</string>
+
+    <!-- Conversation List Screen -->
+    <string name="messagestitle">Messages</string>
+    <string name="devicediscoverable">Your device is discoverable</string>
+    <string name="devicediscoverabledesc">Others can connect to you via Bluetooth</string>
+    <string name="recentconversations">Recent Conversations</string>
+    <string name="noconversations">No conversations yet.\n\nWhen someone connects to you,\ntheir messages will appear here.</string>
+    <string name="nomessagesyet">No messages yet</string>
+
+    <!-- Chat Screen -->
+    <string name="typemessage">Type a message…</string>
+    <string name="waitingconnection">Waiting for connection…</string>
+    <string name="nomessagesconnected">No messages yet.\nSay hello! 👋</string>
+    <string name="nomessageswaiting">Waiting for connection…\n\nMessages will appear here once connected.</string>
     <string name="send">Send</string>
-    <string name="recording">Recording...</string>
-    <string name="media_image">Image</string>
-    <string name="media_audio">Audio</string>
-    <string name="media_video">Video</string>
-    <string name="media_file">File</string>
-    <string name="permissions_required">Bluetooth, media, camera, and microphone permissions are required for the full demo.</string>
+    <string name="back">Back</string>
+
+    <!-- Media -->
+    <string name="attachmedia">Attach media</string>
+    <string name="takephoto">Take Photo</string>
+    <string name="chooseimage">Choose Image</string>
+    <string name="recordvideo">Record Video</string>
+    <string name="choosevideo">Choose Video</string>
+    <string name="recordaudio">Voice Message</string>
+    <string name="choosefile">Choose File</string>
+    <string name="cancel">Cancel</string>
+    <string name="recording">Recording…</string>
+    <string name="taptostop">Tap to stop</string>
+    <string name="audiomessage">Audio message</string>
+    <string name="videomessage">Video</string>
+    <string name="filemessage">File</string>
+    <string name="imagemessage">Image</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="close">Close</string>
+    <string name="fullimage">Full image</string>
+
+    <!-- Connection Status -->
+    <string name="statusdisconnected">Disconnected</string>
+    <string name="statusconnecting">Connecting…</string>
+    <string name="statusconnected">Connected to %s</string>
+    <string name="statuswaiting">Waiting for connection…</string>
+    <string name="statusconnectionlost">Connection lost</string>
+
+    <!-- Errors -->
+    <string name="errorbluetoothrequired">Bluetooth permissions are required for this app</string>
+    <string name="errorcamerarequired">Camera permission is required</string>
+    <string name="erroraudiorequired">Microphone permission is required</string>
+    <string name="errorstoragerequired">Storage permission is required</string>
+
+    <!-- Language -->
+    <string name="language">Language</string>
+    <string name="arabic">العربية</string>
+    <string name="english">English</string>
 </resources>
