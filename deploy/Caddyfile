@@ -9,6 +9,10 @@
         reverse_proxy api:8000
     }
 
+    handle /mlflow* {
+        reverse_proxy mlflow:5000
+    }
+
     handle {
         reverse_proxy frontend:80
     }

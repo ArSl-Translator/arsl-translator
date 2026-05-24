@@ -25,6 +25,7 @@ data/**/*
 !data/**/.gitkeep
 artifacts/
 outputs/
+mlruns/
 models/*.pt
 *.tgz
 

@@ -204,7 +204,7 @@ Open:
 - Health: http://localhost:8000/health
 - MLflow: http://localhost:5000
 
-Register an account, go to **Video Upload** or **Webcam**, then choose the model from the dropdown.
+Register an account, go to **Video Upload** or **Webcam**, then choose the recognition engine.
 
 ## Checkpoints
 
@@ -213,6 +213,7 @@ Model files are stored in:
 ```text
 models/
   arabsign_best_model.pt
+  karsl_mediapipe_bilstm_best.pt
   baseline_resnet18_bilstm_last.pt
   baseline_resnet18_bilstm_best.pt
 ```
@@ -223,11 +224,20 @@ Docker Compose uses:
 
 ```bash
 MODEL_PATH=/app/models/baseline_resnet18_bilstm_last.pt
+KARSL_MEDIAPIPE_MODEL_PATH=/app/models/karsl_mediapipe_bilstm_best.pt
 ARABSIGN_MODEL_PATH=/app/models/arabsign_best_model.pt
 MEDIAPIPE_MODEL_PATH=/app/mediapipe_models/pose_landmarker_full.task
+HAND_LANDMARKER_MODEL_PATH=/app/mediapipe_models/hand_landmarker.task
+MLFLOW_TRACKING_URI=http://mlflow:5000
 ```
 
-The Docker image downloads the MediaPipe pose landmarker model during build.
+The Docker image downloads the MediaPipe pose and hand landmarker models during build.
+
+To log the currently served checkpoints into MLflow:
+
+```bash
+docker compose exec api python scripts/mlflow_log_current_models.py --tracking_uri http://mlflow:5000
+```
 
 ## Project Structure
 

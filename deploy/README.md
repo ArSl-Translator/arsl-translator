@@ -6,6 +6,7 @@ This deployment runs the full ArSL platform on one VM:
 - Nginx serves the built React frontend.
 - FastAPI serves `/api/*` for inference, auth, history, and audio files.
 - PostgreSQL stores users and prediction history.
+- MLflow serves experiment and model tracking at `/mlflow`.
 - Model checkpoints stay on the VM under `models/` and are mounted into the API container.
 
 ## 1. DNS
@@ -90,9 +91,34 @@ Open:
 ```text
 https://arsl.hadighazi.com
 https://arsl.hadighazi.com/api/health
+https://arsl.hadighazi.com/mlflow
 ```
 
-## 5. GitHub Actions CI/CD
+## 5. MLflow Tracking
+
+Production includes an MLflow tracking server. It stores metadata and model artifacts on the VM under:
+
+```text
+~/arsl-translator/mlruns/
+```
+
+After the current model files are present in `models/`, log them into MLflow:
+
+```bash
+cd ~/arsl-translator
+docker compose -f docker-compose.prod.yml --env-file .env.production exec api \
+  python scripts/mlflow_log_current_models.py --tracking_uri http://mlflow:5000
+```
+
+Then open:
+
+```text
+https://arsl.hadighazi.com/mlflow
+```
+
+You should see a `serving_models` experiment with runs for the current KArSL MediaPipe and ArabSign checkpoints. If you only want metadata and do not want to upload the checkpoint files into MLflow artifacts, add `--skip_artifacts`.
+
+## 6. GitHub Actions CI/CD
 
 Add these repository secrets in GitHub:
 
@@ -114,11 +140,12 @@ After that, every push to `main` will:
 
 You can also trigger the workflow manually from GitHub Actions -> Deploy -> Run workflow.
 
-## 6. Useful Commands
+## 7. Useful Commands
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production ps
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f api
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f caddy
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f mlflow
 docker compose -f docker-compose.prod.yml --env-file .env.production down
 ```
