@@ -1,4 +1,4 @@
-# ArSL Translator
+﻿# ArSL Translator
 
 ArSL Translator is an assistive Arabic Sign Language communication platform. It combines machine learning, a full-stack web application, experiment tracking, production deployment, and a companion Android app for offline nearby communication.
 
@@ -38,7 +38,7 @@ The final system is not just a notebook or one trained model. It is a deployable
 | ArabSign model | Working when `models/arabsign_best_model.pt` exists |
 | Raw-frame KArSL baseline | Implemented as an experimental baseline, not currently served unless a checkpoint is provided |
 | MLflow | Available locally and in production deployment |
-| Assistive Message Studio | Optional AI writing assistant for clear messages, simplification, phrasebooks, and quick replies |
+| Assistive Message Studio | Optional chat-integrated AI writing assistant for clarification, simplification, and context suggestions |
 | Android offline chat APK | Buildable and downloadable from the website |
 | Production deployment | Dockerized for a GCP VM and domain deployment |
 
@@ -138,7 +138,7 @@ The web app is built with React and Vite. It is the main user-facing interface f
 | Prediction history | Saves predictions per authenticated user |
 | Dashboard | Shows prediction usage summaries |
 | Offline chat page | Presents the Android app, APK download, and two-phone demo link |
-| Assistive Message Studio | Optional AI support for writing clearer messages and simplifying text |
+| Assistive Message Studio | Optional AI actions inside chat messages and the message composer |
 
 ### Frontend Model Selection
 
@@ -170,18 +170,24 @@ For webcam prediction, the body includes the selected model:
 
 ## Assistive Message Studio
 
-Assistive Message Studio is the optional generative AI layer. It is intentionally separate from sign prediction: it does not change model outputs or claim to improve recognition accuracy. Instead, it helps people communicate more clearly through text.
+Assistive Message Studio is the optional generative AI layer. It is intentionally separate from sign prediction: it does not change model outputs or claim to improve recognition accuracy. Instead, it helps people communicate more clearly inside the chat itself.
 
-The feature supports four communication tasks:
+The feature supports three communication tasks:
 
 | Mode | Direction | Purpose |
 |---|---|---|
 | `deaf_to_hearing` | Deaf user -> hearing person | Turn a rough or short idea into a clear, natural sentence |
 | `hearing_to_deaf` | Hearing person -> deaf user | Simplify a longer message into short, direct wording |
-| `phrasebook` | Context -> ready phrases | Generate useful phrases for a clinic, classroom, public service, emergency, or general situation |
-| `smart_replies` | Context -> quick replies | Suggest short replies that can be sent during a conversation |
+| `suggestions` | Context -> ready text | Generate useful ready-to-send phrases or short replies for the current chat situation |
 
 The mobile app still works fully offline for Bluetooth chat. The AI writing assistant is an optional online feature that calls the deployed ArSL API, which then calls a local open-source model running on the VM through Ollama.
+
+In the Android chat:
+
+- The helper sees **Make clearer** under incoming messages from the assisted user.
+- The assisted user sees **Simplify** under incoming messages from the helper.
+- Both users can tap the sparkle button beside the message composer to generate context suggestions.
+- The assistant responds in the same language as the message when `language=auto`.
 
 Runtime flow:
 
@@ -191,7 +197,7 @@ Android app
   -> FastAPI prompt builder
   -> Ollama local model, default qwen2.5:1.5b
   -> generated communication text
-  -> editable/copyable suggestion in the app
+  -> inline message explanation or composer draft
 ```
 
 Endpoint:
@@ -207,7 +213,7 @@ Request:
   "text": "I did not understand the doctor",
   "mode": "hearing_to_deaf",
   "context": "clinic",
-  "language": "ar"
+  "language": "auto"
 }
 ```
 
@@ -217,7 +223,7 @@ Response:
 {
   "mode": "hearing_to_deaf",
   "context": "clinic",
-  "output": "لم أفهم. اشرح لي بكلمات بسيطة من فضلك.",
+  "output": "I did not understand the doctor. Please explain in a simpler way.",
   "model": "qwen2.5:1.5b",
   "source": "ollama"
 }

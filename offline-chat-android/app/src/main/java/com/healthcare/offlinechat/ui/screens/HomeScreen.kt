@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,7 +32,6 @@ import com.healthcare.offlinechat.viewmodel.UserRole
 @Composable
 fun HomeScreen(
     onRoleSelected: (UserRole) -> Unit,
-    onOpenAssistant: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -123,38 +121,6 @@ fun HomeScreen(
                     )
                     Text(
                         text = stringResource(R.string.roleassistantdesc),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onOpenAssistant,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Assistive Message Studio",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Optional AI for clearer messages",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

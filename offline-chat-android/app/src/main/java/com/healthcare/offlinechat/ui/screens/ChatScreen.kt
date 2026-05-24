@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.healthcare.offlinechat.R
+import com.healthcare.offlinechat.ai.AiAssistantClient
 import com.healthcare.offlinechat.data.ChatMessage
 import com.healthcare.offlinechat.media.AudioRecorder
 import com.healthcare.offlinechat.media.MediaHandler
@@ -55,8 +58,10 @@ import com.healthcare.offlinechat.ui.components.AudioRecorderBar
 import com.healthcare.offlinechat.ui.components.ImageViewer
 import com.healthcare.offlinechat.ui.components.MediaPickerSheet
 import com.healthcare.offlinechat.ui.components.MessageBubble
+import com.healthcare.offlinechat.viewmodel.UserRole
 import androidx.core.net.toUri
 import java.io.File
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,11 +73,16 @@ fun ChatScreen(
     onSendMessage: (String) -> Unit,
     onSendMedia: (MediaInfo) -> Unit,
     onBack: () -> Unit,
+    userRole: UserRole,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val aiClient = remember { AiAssistantClient() }
+    val scope = rememberCoroutineScope()
 
     var messageText by remember { mutableStateOf("") }
+    var aiOutputs by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
+    var aiStatus by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -298,10 +308,39 @@ fun ChatScreen(
                             items = messages,
                             key = { it.id }
                         ) { message ->
+                            val aiMode = when (userRole) {
+                                UserRole.ASSISTANT -> "deaf_to_hearing"
+                                UserRole.ASSISTED -> "hearing_to_deaf"
+                            }
+                            val aiLabel = when (userRole) {
+                                UserRole.ASSISTANT -> "Make clearer"
+                                UserRole.ASSISTED -> "Simplify"
+                            }
                             MessageBubble(
                                 message = message,
                                 onImageClick = { selectedImageUri = it },
-                                onVideoClick = { selectedVideoUri = it }
+                                onVideoClick = { selectedVideoUri = it },
+                                aiText = aiOutputs[message.id],
+                                aiActionLabel = if (!message.isFromMe && message.messageType == com.healthcare.offlinechat.data.MessageType.TEXT.name) aiLabel else null,
+                                onAiAction = if (!message.isFromMe && message.messageType == com.healthcare.offlinechat.data.MessageType.TEXT.name) {
+                                    {
+                                        aiOutputs = aiOutputs + (message.id to "Generating...")
+                                        scope.launch {
+                                            runCatching {
+                                                aiClient.assist(
+                                                    text = message.content,
+                                                    mode = aiMode,
+                                                    context = "chat",
+                                                    language = "auto"
+                                                )
+                                            }.onSuccess { result ->
+                                                aiOutputs = aiOutputs + (message.id to result.output)
+                                            }.onFailure { error ->
+                                                aiOutputs = aiOutputs + (message.id to (error.message ?: "AI assistant is unavailable"))
+                                            }
+                                        }
+                                    }
+                                } else null
                             )
                         }
                     }
@@ -351,6 +390,40 @@ fun ChatScreen(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
+                    IconButton(
+                        onClick = {
+                            aiStatus = "Generating suggestions..."
+                            scope.launch {
+                                runCatching {
+                                    aiClient.assist(
+                                        text = messageText,
+                                        mode = "suggestions",
+                                        context = "chat",
+                                        language = "auto"
+                                    )
+                                }.onSuccess { result ->
+                                    messageText = result.output
+                                    aiStatus = null
+                                }.onFailure { error ->
+                                    aiStatus = error.message ?: "AI assistant is unavailable"
+                                }
+                            }
+                        },
+                        enabled = isConnected
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "AI suggestions",
+                            tint = if (isConnected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -386,6 +459,15 @@ fun ChatScreen(
                             }
                         )
                     }
+                }
+
+                aiStatus?.let { status ->
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
                 }
             }
         }

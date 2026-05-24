@@ -301,8 +301,7 @@ def _decode_frame(frame_b64: str, idx: int, total: int) -> np.ndarray:
 AssistantMode = Literal[
     "deaf_to_hearing",
     "hearing_to_deaf",
-    "phrasebook",
-    "smart_replies",
+    "suggestions",
 ]
 
 
@@ -310,7 +309,7 @@ class AssistRequest(BaseModel):
     text: str = ""
     mode: AssistantMode = "deaf_to_hearing"
     context: str = "general"
-    language: Literal["ar", "en", "both"] = "ar"
+    language: Literal["auto", "ar", "en", "both"] = "auto"
 
 
 class AssistResponse(BaseModel):
@@ -333,13 +332,9 @@ def _assistant_instruction(mode: str) -> str:
             "or hard-of-hearing person who may prefer short clear text. Preserve the exact "
             "meaning, speaker, and direction. Keep it respectful."
         ),
-        "phrasebook": (
-            "Create a compact phrasebook for the selected context. Include practical "
-            "ready-to-send phrases."
-        ),
-        "smart_replies": (
-            "Suggest short useful replies for the selected context. The replies should "
-            "be easy to send in a nearby conversation."
+        "suggestions": (
+            "Suggest useful ready-to-send phrases or short replies for the selected context. "
+            "If the user text describes a situation, tailor the suggestions to it."
         ),
     }
     return instructions[mode]
@@ -351,28 +346,19 @@ def _fallback_assist(request: AssistRequest) -> str:
         return text or "Please write the idea you want to communicate."
     if request.mode == "hearing_to_deaf":
         return text or "Please write the message you want simplified."
-    if request.mode == "phrasebook":
-        return "\n".join(
-            [
-                "1. I need help.",
-                "2. Please write the information for me.",
-                "3. I did not understand. Please explain simply.",
-                "4. I cannot hear clearly.",
-                "5. Is this urgent?",
-            ]
-        )
     return "\n".join(
         [
-            "Yes, I understand.",
-            "Please explain more simply.",
-            "Can you write that down?",
-            "I need a moment.",
+            "1. I need help.",
+            "2. Please explain more simply.",
+            "3. Can you write that down?",
+            "4. I need a moment.",
         ]
     )
 
 
 def _build_assistant_prompt(request: AssistRequest) -> str:
     language_note = {
+        "auto": "Respond in the same language as the user text. If there is no user text, use Arabic.",
         "ar": "Respond in Arabic only.",
         "en": "Respond in English only.",
         "both": "Respond in Arabic first, then English.",
@@ -383,16 +369,18 @@ You help deaf and hard-of-hearing users communicate clearly.
 You are not a doctor and you must not diagnose medical conditions.
 Your most important rule: preserve the original meaning exactly.
 Do not invert who understood whom, who needs help, or who did an action.
-If the input is in English and the requested language is Arabic, translate the same meaning into simple Arabic.
+Use simple words and short sentences. Do not explain your reasoning.
+If the task asks for suggestions, return 3 to 5 numbered options only.
 
 Examples:
 Input: I did not understand the doctor
-Good Arabic output: لم أفهم كلام الطبيب. من فضلك اشرح لي بطريقة أبسط.
-Bad Arabic output: الطبيب لم يفهمني
+Good output: I did not understand the doctor. Please explain in a simpler way.
+Good Arabic output if Arabic is requested: لم أفهم كلام الطبيب. من فضلك اشرح لي بطريقة أبسط.
+Bad output: The doctor did not understand me.
 
 Input: The patient should take the medicine after food
-Good Arabic output: خذ الدواء بعد الأكل.
-Bad Arabic output: المريض أعطى الدواء للطبيب
+Good output: Take the medicine after food.
+Bad output: The patient gave the medicine to the doctor.
 
 Task: {_assistant_instruction(request.mode)}
 Context: {request.context}

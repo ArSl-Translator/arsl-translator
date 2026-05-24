@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +47,9 @@ fun MessageBubble(
     message: ChatMessage,
     onImageClick: (String) -> Unit,
     onVideoClick: (String) -> Unit,
+    aiText: String? = null,
+    aiActionLabel: String? = null,
+    onAiAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val chatColors = LocalChatColors.current
@@ -223,6 +228,34 @@ fun MessageBubble(
                             }
                         }
                     }
+                }
+
+                if (messageType == MessageType.TEXT && aiActionLabel != null && onAiAction != null) {
+                    AssistChip(
+                        onClick = onAiAction,
+                        label = { Text(aiActionLabel) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                if (!aiText.isNullOrBlank()) {
+                    Text(
+                        text = aiText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textColor,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = if (message.isFromMe) 0.18f else 0.75f))
+                            .padding(8.dp)
+                    )
                 }
 
                 Text(

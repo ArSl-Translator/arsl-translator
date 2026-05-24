@@ -136,7 +136,7 @@ Test the API endpoint:
 ```bash
 curl -X POST https://arsl.hadighazi.com/api/ai/assist \
   -H "Content-Type: application/json" \
-  -d '{"text":"I did not understand the doctor","mode":"hearing_to_deaf","context":"clinic","language":"ar"}'
+  -d '{"text":"I did not understand the doctor","mode":"hearing_to_deaf","context":"clinic","language":"auto"}'
 ```
 
 The Android app still works without this model; only the optional AI writing assistant needs internet access to the deployed API.

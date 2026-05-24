@@ -10,7 +10,7 @@ Accessible Chat is the Android companion application for the ArSL Translator pla
 - Runs background listening and transfer threads so the Compose UI stays responsive.
 - Stores conversations and messages locally with Room.
 - Supports media-oriented chat flows including images, video, audio, and files.
-- Includes Assistive Message Studio for optional AI-assisted writing, simplification, phrasebooks, and quick replies.
+- Includes Assistive Message Studio for optional chat-integrated clarification, simplification, and context-aware suggested replies.
 - Includes Arabic and English resources with RTL support.
 
 The core Bluetooth chat works without internet access. Assistive Message Studio is optional: it requires network access to the deployed ArSL API, where a local open-source Ollama model runs on the VM. If the AI service is unavailable, Bluetooth chat is unaffected.

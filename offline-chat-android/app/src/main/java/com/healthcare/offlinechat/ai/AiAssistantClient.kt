@@ -19,7 +19,7 @@ class AiAssistantClient(
         text: String,
         mode: String,
         context: String,
-        language: String = "ar"
+        language: String = "auto"
     ): AiAssistResult = withContext(Dispatchers.IO) {
         val url = URL("${baseUrl.trimEnd('/')}/ai/assist")
         val body = JSONObject().apply {
