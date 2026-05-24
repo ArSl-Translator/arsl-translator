@@ -1,4 +1,4 @@
-import base64
+﻿import base64
 import os
 import re
 import tempfile
@@ -196,7 +196,7 @@ def startup():
         except Exception as exc:
             print(f"Error loading KArSL MediaPipe model: {exc}")
     else:
-        print("Warning: KArSL MediaPipe checkpoint missing. Set KARSL_MEDIAPIPE_MODEL_PATH or place models/karsl_mediapipe_bilstm_best.pt.")
+        print("Warning: KArSL MediaPipe checkpoint missing.")
 
     if arabsign_model_path:
         try:
@@ -205,16 +205,13 @@ def startup():
         except Exception as exc:
             print(f"Error loading ArabSign model: {exc}")
     else:
-        print("Warning: ArabSign checkpoint missing. Set ARABSIGN_MODEL_PATH or place models/arabsign_best_model.pt.")
+        print("Warning: ArabSign checkpoint missing.")
 
 
 @app.get("/health")
 def health():
     models = {
-        name: {
-            "loaded": name in model_registry,
-            "path": path,
-        }
+        name: {"loaded": name in model_registry, "path": path}
         for name, path in model_paths.items()
     }
     return {
@@ -223,10 +220,7 @@ def health():
         "models": models,
         "mediapipe_pose_model_available": mediapipe_model_available(),
         "mediapipe_hand_model_available": os.path.isfile(HAND_LANDMARKER_MODEL_PATH),
-        "assistant": {
-            "model": ASSISTANT_MODEL,
-            "url": OLLAMA_URL,
-        },
+        "assistant": {"model": ASSISTANT_MODEL, "url": OLLAMA_URL},
     }
 
 
@@ -275,7 +269,10 @@ async def predict_frames(
         raise HTTPException(status_code=400, detail="No frames provided")
 
     try:
-        frames = [_decode_frame(frame_b64, idx, len(request.frames)) for idx, frame_b64 in enumerate(request.frames)]
+        frames = [
+            _decode_frame(frame_b64, idx, len(request.frames))
+            for idx, frame_b64 in enumerate(request.frames)
+        ]
         result = inference.predict_frames(frames, top_k=request.top_k)
         save_prediction(db, current_user, f"frames:{selected_model}", result)
         return result
@@ -289,11 +286,9 @@ def _decode_frame(frame_b64: str, idx: int, total: int) -> np.ndarray:
     try:
         if "," in frame_b64:
             frame_b64 = frame_b64.split(",", 1)[1]
-
         img_data = base64.b64decode(frame_b64.strip())
         if not img_data:
             raise ValueError("Empty image data after base64 decode")
-
         nparr = np.frombuffer(img_data, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
@@ -303,11 +298,11 @@ def _decode_frame(frame_b64: str, idx: int, total: int) -> np.ndarray:
         raise ValueError(f"Failed to decode frame {idx}/{total}: {exc}")
 
 
-AssistantMode = Literal[
-    "deaf_to_hearing",
-    "hearing_to_deaf",
-    "suggestions",
-]
+# ─────────────────────────────────────────────
+# AI Assistant
+# ─────────────────────────────────────────────
+
+AssistantMode = Literal["deaf_to_hearing", "hearing_to_deaf", "suggestions"]
 
 
 class AssistRequest(BaseModel):
@@ -337,104 +332,199 @@ def _resolve_language(request: AssistRequest) -> Literal["ar", "en"]:
 
 
 def _build_assistant_prompt(request: AssistRequest, language: Literal["ar", "en"]) -> str:
-    text = request.text.strip() or ("اكتب اقتراحات قصيرة مناسبة." if language == "ar" else "Write short useful suggestions.")
+    text = request.text.strip() or (
+        "\u0627\u0643\u062a\u0628 \u0627\u0642\u062a\u0631\u0627\u062d\u0627\u062a \u0642\u0635\u064a\u0631\u0629 \u0645\u0646\u0627\u0633\u0628\u0629." if language == "ar"
+        else "Write short useful suggestions."
+    )
 
     prompts = {
-        ("deaf_to_hearing", "ar"): f"""أنت مساعد كتابة للتواصل مع الأشخاص السامعين.
-المهمة: حوّل رسالة المستخدم القصيرة أو غير المرتبة إلى جملة عربية واضحة وطبيعية.
-القواعد: اكتب بالعربية فقط. حافظ على المعنى والفاعل والاتجاه كما هي. لا تضف تشخيصا أو معلومات جديدة. لا تعكس المعنى.
-مثال جيد:
-الإدخال: دكتور انا ما فهم كلام دواء
-الإجابة: دكتور، لم أفهم تعليمات الدواء. من فضلك اشرحها لي بطريقة أبسط.
-مثال سيئ لمعنى معكوس: الطبيب لم يفهمني.
-الإدخال: {text}
-الإجابة:""",
-        ("deaf_to_hearing", "en"): f"""You are a communication writing assistant for hearing readers.
-Task: rewrite the user's rough or short message as one clear, natural English sentence.
-Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add diagnosis or new facts. Do not reverse the meaning.
-Good example:
-Input: I no understand medicine words doctor
-Answer: Doctor, I did not understand the medicine instructions. Please explain them more simply.
-Bad reversed meaning: The doctor did not understand me.
-Input: {text}
-Answer:""",
-        ("hearing_to_deaf", "ar"): f"""أنت مساعد كتابة للتواصل مع شخص أصم أو ضعيف السمع.
-المهمة: بسّط رسالة المستخدم إلى عربية قصيرة ومباشرة ومحترمة.
-القواعد: اكتب بالعربية فقط. حافظ على المعنى والفاعل والاتجاه كما هي. لا تضف معلومات جديدة.
-مثال:
-الإدخال: يجب أن تتناول الدواء بعد الأكل مرتين يوميا وإذا استمر الألم راجع الطبيب
-الإجابة: خذ الدواء بعد الأكل مرتين في اليوم. إذا بقي الألم، راجع الطبيب.
-الإدخال: {text}
-الإجابة:""",
-        ("hearing_to_deaf", "en"): f"""You are a communication assistant for deaf or hard-of-hearing readers.
-Task: simplify the user's message into short, direct, respectful English.
-Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add new facts.
-Example:
-Input: The patient should take the medicine after food twice daily and should return if the pain continues.
-Answer: Take the medicine after food two times a day. If the pain continues, see the doctor.
-Input: {text}
-Answer:""",
-        ("suggestions", "ar"): f"""أنت مساعد يكتب عبارات جاهزة للإرسال في محادثة طبية أو يومية.
-المهمة: أعط 3 إلى 5 اقتراحات عربية قصيرة ومرقمة تناسب النص.
-القواعد: اكتب بالعربية فقط. لا تستخدم الصينية أو الإنجليزية. اجعل كل اقتراح جاهزا للإرسال.
-مثال:
-الإدخال: انا في المستشفى واريد اسأل عن موعدي
-الإجابة:
-1. متى موعدي؟
-2. أين أنتظر؟
-3. هل تأخر موعدي؟
-الإدخال: {text}
-الإجابة:""",
-        ("suggestions", "en"): f"""You write ready-to-send chat phrases for medical or everyday communication.
-Task: give 3 to 5 short numbered English suggestions that fit the text.
-Rules: write English only. Each suggestion must be ready to send.
-Example:
-Input: I am at the hospital and want to ask about my appointment
-Answer:
-1. When is my appointment?
-2. Where should I wait?
-3. Has my appointment been delayed?
-Input: {text}
-Answer:""",
+        ("deaf_to_hearing", "ar"): (
+            "\u0623\u0646\u062a \u0645\u0633\u0627\u0639\u062f \u0643\u062a\u0627\u0628\u0629 \u0644\u0644\u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0627\u0644\u0623\u0634\u062e\u0627\u0635 \u0627\u0644\u0633\u0627\u0645\u0639\u064a\u0646.\n"
+            "\u0627\u0644\u0645\u0647\u0645\u0629: \u062d\u0648\u0644 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0642\u0635\u064a\u0631\u0629 \u0623\u0648 \u063a\u064a\u0631 \u0627\u0644\u0645\u0631\u062a\u0628\u0629 \u0625\u0644\u0649 \u062c\u0645\u0644\u0629 \u0639\u0631\u0628\u064a\u0629 \u0648\u0627\u0636\u062d\u0629 \u0648\u0637\u0628\u064a\u0639\u064a\u0629.\n"
+            "\u0627\u0644\u0642\u0648\u0627\u0639\u062f: \u0627\u0643\u062a\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0641\u0642\u0637. \u062d\u0627\u0641\u0638 \u0639\u0644\u0649 \u0627\u0644\u0645\u0639\u0646\u0649 \u0648\u0627\u0644\u0641\u0627\u0639\u0644 \u0648\u0627\u0644\u0627\u062a\u062c\u0627\u0647 \u0643\u0645\u0627 \u0647\u064a. \u0644\u0627 \u062a\u0636\u0641 \u062a\u0634\u062e\u064a\u0635\u0627\u064b \u0623\u0648 \u0645\u0639\u0644\u0648\u0645\u0627\u062a \u062c\u062f\u064a\u062f\u0629. \u0644\u0627 \u062a\u0639\u0643\u0633 \u0627\u0644\u0645\u0639\u0646\u0649. \u0644\u0627 \u062a\u062a\u062d\u062f\u062b \u0645\u0639 \u0627\u0644\u0645\u0631\u064a\u0636\u060c \u0641\u0642\u0637 \u0623\u0639\u062f \u0635\u064a\u0627\u063a\u0629 \u0643\u0644\u0627\u0645\u0647.\n\n"
+            "\u0645\u062b\u0627\u0644 \u062c\u064a\u062f:\n"
+            "\u0627\u0644\u0625\u062f\u062e\u0627\u0644: \u062f\u0643\u062a\u0648\u0631 \u0627\u0646\u0627 \u0645\u0627 \u0641\u0647\u0645 \u0643\u0644\u0627\u0645 \u062f\u0648\u0627\u0621\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629: \u062f\u0643\u062a\u0648\u0631\u060c \u0644\u0645 \u0623\u0641\u0647\u0645 \u062a\u0639\u0644\u064a\u0645\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0621. \u0645\u0646 \u0641\u0636\u0644\u0643 \u0627\u0634\u0631\u062d\u0647\u0627 \u0644\u064a \u0628\u0637\u0631\u064a\u0642\u0629 \u0623\u0628\u0633\u0637.\n\n"
+            "\u0645\u062b\u0627\u0644 \u0633\u064a\u0626 (\u0645\u0639\u0646\u0649 \u0645\u0639\u0643\u0648\u0633):\n"
+            "\u0627\u0644\u0625\u062f\u062e\u0627\u0644: \u062f\u0643\u062a\u0648\u0631 \u0627\u0646\u0627 \u0645\u0627 \u0641\u0647\u0645 \u0643\u0644\u0627\u0645 \u062f\u0648\u0627\u0621\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u062e\u0627\u0637\u0626\u0629: \u0627\u0644\u0637\u0628\u064a\u0628 \u0644\u0645 \u064a\u0641\u0647\u0645\u0646\u064a. \u2190 \u062e\u0627\u0637\u0626\u060c \u0627\u0644\u0645\u0639\u0646\u0649 \u0627\u0646\u0639\u0643\u0633.\n\n"
+            "\u0645\u062b\u0627\u0644 \u0633\u064a\u0626 (\u0627\u0644\u062a\u062d\u062f\u062b \u0645\u0639 \u0627\u0644\u0645\u0631\u064a\u0636 \u0628\u062f\u0644 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0635\u064a\u0627\u063a\u0629):\n"
+            "\u0627\u0644\u0625\u062f\u062e\u0627\u0644: \u0631\u0627\u0633\u064a \u064a\u062f\u0648\u0631\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u062e\u0627\u0637\u0626\u0629: \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f \u2190 \u062e\u0627\u0637\u0626\u060c \u0623\u0646\u062a \u0644\u0627 \u062a\u062a\u062d\u062f\u062b \u0645\u0639 \u0627\u0644\u0645\u0631\u064a\u0636\u060c \u0623\u0646\u062a \u062a\u0639\u064a\u062f \u0635\u064a\u0627\u063a\u0629 \u0643\u0644\u0627\u0645\u0647.\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u0635\u062d\u064a\u062d\u0629: \u0623\u0634\u0639\u0631 \u0628\u062f\u0648\u0627\u0631 \u0634\u062f\u064a\u062f \u0648\u0644\u0627 \u0623\u0633\u062a\u0637\u064a\u0639 \u0627\u0644\u0648\u0642\u0648\u0641.\n\n"
+            f"\u0627\u0644\u0625\u062f\u062e\u0627\u0644: {text}\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629:"
+        ),
+
+        ("deaf_to_hearing", "en"): (
+            "You are a communication writing assistant for hearing readers.\n"
+            "Task: rewrite the user's rough or short message as one clear, natural English sentence.\n"
+            "Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add diagnosis or new facts. Do not reverse the meaning. Do not answer the user; only rewrite the user's message.\n\n"
+            "Good example:\n"
+            "Input: I no understand medicine words doctor\n"
+            "Answer: Doctor, I did not understand the medicine instructions. Please explain them more simply.\n\n"
+            "Bad reversed meaning example:\n"
+            "Input: I no understand medicine words doctor\n"
+            "Bad answer: The doctor did not understand me. <- wrong, meaning is reversed.\n\n"
+            "Bad assistant-role example:\n"
+            "Input: my head spinning\n"
+            "Bad answer: How can I help you? <- wrong, do not talk to the user, only rewrite their message.\n"
+            "Good answer: I feel very dizzy and cannot stand up.\n\n"
+            f"Input: {text}\n"
+            "Answer:"
+        ),
+
+        ("hearing_to_deaf", "ar"): (
+            "\u0623\u0646\u062a \u0645\u0633\u0627\u0639\u062f \u0643\u062a\u0627\u0628\u0629 \u0644\u0644\u062a\u0648\u0627\u0635\u0644 \u0645\u0639 \u0634\u062e\u0635 \u0623\u0635\u0645 \u0623\u0648 \u0636\u0639\u064a\u0641 \u0627\u0644\u0633\u0645\u0639.\n"
+            "\u0627\u0644\u0645\u0647\u0645\u0629: \u0628\u0633\u0651\u0637 \u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0625\u0644\u0649 \u0639\u0631\u0628\u064a\u0629 \u0642\u0635\u064a\u0631\u0629 \u0648\u0645\u0628\u0627\u0634\u0631\u0629 \u0648\u0645\u062d\u062a\u0631\u0645\u0629.\n"
+            "\u0627\u0644\u0642\u0648\u0627\u0639\u062f: \u0627\u0643\u062a\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0641\u0642\u0637. \u062d\u0627\u0641\u0638 \u0639\u0644\u0649 \u0627\u0644\u0645\u0639\u0646\u0649 \u0648\u0627\u0644\u0641\u0627\u0639\u0644 \u0648\u0627\u0644\u0627\u062a\u062c\u0627\u0647 \u0643\u0645\u0627 \u0647\u064a. \u0644\u0627 \u062a\u0636\u0641 \u0645\u0639\u0644\u0648\u0645\u0627\u062a \u062c\u062f\u064a\u062f\u0629.\n\n"
+            "\u0645\u062b\u0627\u0644:\n"
+            "\u0627\u0644\u0625\u062f\u062e\u0627\u0644: \u064a\u062c\u0628 \u0623\u0646 \u062a\u062a\u0646\u0627\u0648\u0644 \u0627\u0644\u062f\u0648\u0627\u0621 \u0628\u0639\u062f \u0627\u0644\u0623\u0643\u0644 \u0645\u0631\u062a\u064a\u0646 \u064a\u0648\u0645\u064a\u0627\u064b \u0648\u0625\u0630\u0627 \u0627\u0633\u062a\u0645\u0631 \u0627\u0644\u0623\u0644\u0645 \u0631\u0627\u062c\u0639 \u0627\u0644\u0637\u0628\u064a\u0628\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629: \u062e\u0630 \u0627\u0644\u062f\u0648\u0627\u0621 \u0628\u0639\u062f \u0627\u0644\u0623\u0643\u0644 \u0645\u0631\u062a\u064a\u0646 \u0641\u064a \u0627\u0644\u064a\u0648\u0645. \u0625\u0630\u0627 \u0628\u0642\u064a \u0627\u0644\u0623\u0644\u0645\u060c \u0631\u0627\u062c\u0639 \u0627\u0644\u0637\u0628\u064a\u0628.\n\n"
+            f"\u0627\u0644\u0625\u062f\u062e\u0627\u0644: {text}\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629:"
+        ),
+
+        ("hearing_to_deaf", "en"): (
+            "You are a communication assistant for deaf or hard-of-hearing readers.\n"
+            "Task: simplify the user's message into short, direct, respectful English.\n"
+            "Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add new facts.\n\n"
+            "Example:\n"
+            "Input: The patient should take the medicine after food twice daily and should return if the pain continues.\n"
+            "Answer: Take the medicine after food two times a day. If the pain continues, see the doctor.\n\n"
+            f"Input: {text}\n"
+            "Answer:"
+        ),
+
+        ("suggestions", "ar"): (
+            "\u0623\u0646\u062a \u062a\u0643\u062a\u0628 \u0631\u0633\u0627\u0626\u0644 \u062c\u0627\u0647\u0632\u0629 \u0644\u0644\u0625\u0631\u0633\u0627\u0644 \u0645\u0646 \u0642\u0650\u0628\u064e\u0644 \u0627\u0644\u0645\u0631\u064a\u0636 \u0627\u0644\u0623\u0635\u0645 \u0625\u0644\u0649 \u0637\u0627\u0642\u0645 \u0627\u0644\u0645\u0633\u062a\u0634\u0641\u0649 \u0623\u0648 \u0627\u0644\u0637\u0628\u064a\u0628.\n"
+            "\u0627\u0644\u0645\u0647\u0645\u0629: \u0623\u0639\u0637 3 \u0625\u0644\u0649 5 \u0627\u0642\u062a\u0631\u0627\u062d\u0627\u062a \u0639\u0631\u0628\u064a\u0629 \u0642\u0635\u064a\u0631\u0629 \u0648\u0645\u0631\u0642\u0645\u0629 \u062a\u0646\u0627\u0633\u0628 \u0627\u0644\u0646\u0635.\n"
+            "\u0627\u0644\u0642\u0648\u0627\u0639\u062f: \u0627\u0643\u062a\u0628 \u0628\u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u0641\u0642\u0637. \u0644\u0627 \u062a\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 \u0623\u0648 \u0627\u0644\u0635\u064a\u0646\u064a\u0629. \u0643\u0644 \u0627\u0642\u062a\u0631\u0627\u062d \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u062c\u0645\u0644\u0629 \u064a\u0631\u0633\u0644\u0647\u0627 \u0627\u0644\u0645\u0631\u064a\u0636\u060c \u0648\u0644\u064a\u0633 \u0631\u062f\u0627\u064b \u0645\u0646 \u0627\u0644\u0637\u0627\u0642\u0645.\n\n"
+            "\u0645\u062b\u0627\u0644 \u062e\u0627\u0637\u0626 (\u0643\u0644\u0627\u0645 \u0627\u0644\u0637\u0627\u0642\u0645\u060c \u0644\u064a\u0633 \u0627\u0644\u0645\u0631\u064a\u0636):\n"
+            "\u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f \u2190 \u062e\u0627\u0637\u0626.\n"
+            "\u0647\u0644 \u062a\u062d\u062a\u0627\u062c \u0625\u0644\u0649 \u0645\u0633\u0627\u0639\u062f\u0629\u061f \u2190 \u062e\u0627\u0637\u0626.\n\n"
+            "\u0645\u062b\u0627\u0644 \u0635\u062d\u064a\u062d (\u0643\u0644\u0627\u0645 \u0627\u0644\u0645\u0631\u064a\u0636):\n"
+            "1. \u0645\u062a\u0649 \u0645\u0648\u0639\u062f\u064a\u061f\n"
+            "2. \u0623\u064a\u0646 \u0623\u0646\u062a\u0638\u0631\u061f\n"
+            "3. \u0623\u062d\u062a\u0627\u062c \u0645\u0633\u0627\u0639\u062f\u0629.\n\n"
+            "\u0645\u062b\u0627\u0644 \u0643\u0627\u0645\u0644:\n"
+            "\u0627\u0644\u0625\u062f\u062e\u0627\u0644: \u0627\u0646\u0627 \u0641\u064a \u0627\u0644\u0645\u0633\u062a\u0634\u0641\u0649 \u0648\u0627\u0631\u064a\u062f \u0627\u0633\u0627\u0644 \u0639\u0646 \u0645\u0648\u0639\u062f\u064a\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629:\n"
+            "1. \u0645\u062a\u0649 \u0645\u0648\u0639\u062f\u064a\u061f\n"
+            "2. \u0623\u064a\u0646 \u0623\u0646\u062a\u0638\u0631\u061f\n"
+            "3. \u0647\u0644 \u062a\u0623\u062e\u0631 \u0645\u0648\u0639\u062f\u064a\u061f\n"
+            "4. \u0645\u0646 \u0641\u0636\u0644\u0643 \u0623\u062e\u0628\u0631\u0646\u064a \u0639\u0646\u062f\u0645\u0627 \u064a\u062d\u064a\u0646 \u062f\u0648\u0631\u064a.\n\n"
+            f"\u0627\u0644\u0625\u062f\u062e\u0627\u0644: {text}\n"
+            "\u0627\u0644\u0625\u062c\u0627\u0628\u0629:"
+        ),
+
+        ("suggestions", "en"): (
+            "You write ready-to-send messages from the patient to hospital staff or the doctor.\n"
+            "Task: give 3 to 5 short numbered English suggestions that fit the context below.\n"
+            "Rules: write English only. Each suggestion must be a message the patient sends, not a staff reply.\n\n"
+            "Bad examples (staff voice, not patient):\n"
+            "How can I help you? <- wrong.\n"
+            "Do you need assistance? <- wrong.\n\n"
+            "Good examples (patient voice):\n"
+            "1. When is my appointment?\n"
+            "2. Where should I wait?\n"
+            "3. I need help please.\n\n"
+            "Full example:\n"
+            "Input: I am at the hospital and want to ask about my appointment\n"
+            "Answer:\n"
+            "1. When is my appointment?\n"
+            "2. Where should I wait?\n"
+            "3. Has my appointment been delayed?\n"
+            "4. Please tell me when it is my turn.\n\n"
+            f"Input: {text}\n"
+            "Answer:"
+        ),
     }
+
     return prompts[(request.mode, language)]
 
 
 def _deterministic_fallback(request: AssistRequest, language: Literal["ar", "en"]) -> str:
     text = request.text.strip()
+
     if request.mode in {"deaf_to_hearing", "hearing_to_deaf"}:
         if text:
             return text
-        return "اكتب الرسالة التي تريد إرسالها." if language == "ar" else "Write the message you want to send."
+        return (
+            "\u0627\u0643\u062a\u0628 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062a\u064a \u062a\u0631\u064a\u062f \u0625\u0631\u0633\u0627\u0644\u0647\u0627."
+            if language == "ar"
+            else "Write the message you want to send."
+        )
 
+    # suggestions
     lowered = text.lower()
-    if language == "ar":
-        if "موعد" in text:
-            return "\n".join(["1. متى موعدي؟", "2. أين أنتظر؟", "3. هل تأخر موعدي؟", "4. من فضلك أخبرني عندما يحين دوري."])
-        if "دواء" in text or "علاج" in text:
-            return "\n".join(["1. متى آخذ الدواء؟", "2. كم مرة آخذ الدواء؟", "3. هل آخذه قبل الأكل أو بعده؟", "4. من فضلك اكتب تعليمات الدواء."])
-        if "ألم" in text or "الم" in text or "وجع" in text:
-            return "\n".join(["1. أشعر بألم.", "2. الألم قوي.", "3. أحتاج مساعدة من فضلك.", "4. هل يمكن أن تشرح لي ماذا أفعل؟"])
-        return "\n".join(["1. أحتاج مساعدة.", "2. من فضلك اشرح بطريقة أبسط.", "3. هل يمكنك كتابة الكلام؟", "4. أحتاج دقيقة من فضلك."])
 
+    if language == "ar":
+        if "\u0645\u0648\u0639\u062f" in text:
+            return "\n".join([
+                "1. \u0645\u062a\u0649 \u0645\u0648\u0639\u062f\u064a\u061f",
+                "2. \u0623\u064a\u0646 \u0623\u0646\u062a\u0638\u0631\u061f",
+                "3. \u0647\u0644 \u062a\u0623\u062e\u0631 \u0645\u0648\u0639\u062f\u064a\u061f",
+                "4. \u0645\u0646 \u0641\u0636\u0644\u0643 \u0623\u062e\u0628\u0631\u0646\u064a \u0639\u0646\u062f\u0645\u0627 \u064a\u062d\u064a\u0646 \u062f\u0648\u0631\u064a.",
+            ])
+        if "\u062f\u0648\u0627\u0621" in text or "\u0639\u0644\u0627\u062c" in text or "\u062d\u0628\u0629" in text:
+            return "\n".join([
+                "1. \u0645\u062a\u0649 \u0622\u062e\u0630 \u0627\u0644\u062f\u0648\u0627\u0621\u061f",
+                "2. \u0643\u0645 \u0645\u0631\u0629 \u0641\u064a \u0627\u0644\u064a\u0648\u0645\u061f",
+                "3. \u0647\u0644 \u0622\u062e\u0630\u0647 \u0642\u0628\u0644 \u0627\u0644\u0623\u0643\u0644 \u0623\u0645 \u0628\u0639\u062f\u0647\u061f",
+                "4. \u0645\u0646 \u0641\u0636\u0644\u0643 \u0627\u0643\u062a\u0628 \u062a\u0639\u0644\u064a\u0645\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0621.",
+            ])
+        if "\u0623\u0644\u0645" in text or "\u0648\u062c\u0639" in text or "\u0627\u0644\u0645" in text:
+            return "\n".join([
+                "1. \u0623\u0634\u0639\u0631 \u0628\u0623\u0644\u0645.",
+                "2. \u0627\u0644\u0623\u0644\u0645 \u0642\u0648\u064a.",
+                "3. \u0623\u062d\u062a\u0627\u062c \u0645\u0633\u0627\u0639\u062f\u0629 \u0645\u0646 \u0641\u0636\u0644\u0643.",
+                "4. \u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0623\u0646 \u062a\u0634\u0631\u062d \u0644\u064a \u0645\u0627\u0630\u0627 \u0623\u0641\u0639\u0644\u061f",
+            ])
+        return "\n".join([
+            "1. \u0623\u062d\u062a\u0627\u062c \u0645\u0633\u0627\u0639\u062f\u0629.",
+            "2. \u0645\u0646 \u0641\u0636\u0644\u0643 \u0627\u0634\u0631\u062d \u0628\u0637\u0631\u064a\u0642\u0629 \u0623\u0628\u0633\u0637.",
+            "3. \u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0627\u0644\u0643\u062a\u0627\u0628\u0629\u061f",
+            "4. \u0623\u062d\u062a\u0627\u062c \u062f\u0642\u064a\u0642\u0629 \u0645\u0646 \u0641\u0636\u0644\u0643.",
+        ])
+
+    # English suggestions fallback
     if "appointment" in lowered:
-        return "\n".join(["1. When is my appointment?", "2. Where should I wait?", "3. Has my appointment been delayed?", "4. Please tell me when it is my turn."])
-    if "medicine" in lowered or "medication" in lowered:
-        return "\n".join(["1. When should I take the medicine?", "2. How many times should I take it?", "3. Should I take it before or after food?", "4. Please write the medicine instructions."])
+        return "\n".join([
+            "1. When is my appointment?",
+            "2. Where should I wait?",
+            "3. Has my appointment been delayed?",
+            "4. Please tell me when it is my turn.",
+        ])
+    if "medicine" in lowered or "medication" in lowered or "pill" in lowered:
+        return "\n".join([
+            "1. When should I take the medicine?",
+            "2. How many times a day?",
+            "3. Before or after food?",
+            "4. Please write the medicine instructions.",
+        ])
     if "pain" in lowered or "hurt" in lowered:
-        return "\n".join(["1. I am in pain.", "2. The pain is strong.", "3. I need help, please.", "4. Can you explain what I should do?"])
-    return "\n".join(["1. I need help.", "2. Please explain more simply.", "3. Can you write that down?", "4. I need a moment."])
+        return "\n".join([
+            "1. I am in pain.",
+            "2. The pain is strong.",
+            "3. I need help please.",
+            "4. Can you explain what I should do?",
+        ])
+    return "\n".join([
+        "1. I need help.",
+        "2. Please explain more simply.",
+        "3. Can you write that down?",
+        "4. I need a moment please.",
+    ])
 
 
 def _output_is_wrong_script(output: str, language: Literal["ar", "en"]) -> bool:
     if CJK_RE.search(output):
         return True
-
     if language == "ar":
         arabic_count = len(ARABIC_RE.findall(output))
         latin_count = len(LATIN_RE.findall(output))
         return arabic_count == 0 or latin_count > arabic_count
-
     return False
 
 
@@ -454,19 +544,23 @@ def assist_message(request: AssistRequest):
                     "temperature": 0.0,
                     "top_p": 1.0,
                     "num_predict": 220,
-                    "stop": ["\n\n\n", "Input:", "الإدخال:"],
+                    "stop": ["\n\n\n", "Input:", "\u0627\u0644\u0625\u062f\u062e\u0627\u0644:"],
                 },
             },
             timeout=90,
         )
         response.raise_for_status()
         output = str(response.json().get("response", "")).strip()
+
         if not output:
             raise ValueError("Empty response from assistant model")
+
         source = "ollama"
         if _output_is_wrong_script(output, language):
+            print(f"[AI assist] Wrong script for lang={language}, falling back. Output was: {output[:80]!r}")
             output = _deterministic_fallback(request, language)
             source = "fallback"
+
         return AssistResponse(
             mode=request.mode,
             context=request.context,
@@ -474,7 +568,9 @@ def assist_message(request: AssistRequest):
             model=ASSISTANT_MODEL,
             source=source,
         )
-    except Exception:
+
+    except Exception as exc:
+        print(f"[AI assist] Exception: {exc}")
         return AssistResponse(
             mode=request.mode,
             context=request.context,
