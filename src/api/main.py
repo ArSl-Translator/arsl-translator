@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 import tempfile
 from typing import Dict, List, Literal, Optional, Set
 
@@ -30,6 +31,10 @@ app = FastAPI(title="ArSL Translator API", version="0.3.0")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 ASSISTANT_MODEL = os.environ.get("ASSISTANT_MODEL", "qwen2.5:1.5b")
+
+ARABIC_RE = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]")
+LATIN_RE = re.compile(r"[A-Za-z]")
+CJK_RE = re.compile(r"[\u3400-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]")
 
 
 def _cors_origins() -> List[str]:
@@ -309,7 +314,7 @@ class AssistRequest(BaseModel):
     text: str = ""
     mode: AssistantMode = "deaf_to_hearing"
     context: str = "general"
-    language: Literal["auto", "ar", "en", "both"] = "auto"
+    language: Literal["auto", "ar", "en"] = "auto"
 
 
 class AssistResponse(BaseModel):
@@ -320,81 +325,123 @@ class AssistResponse(BaseModel):
     source: str
 
 
-def _assistant_instruction(mode: str) -> str:
-    instructions = {
-        "deaf_to_hearing": (
-            "Rewrite the user's rough or short message into a clear, natural sentence "
-            "for a hearing person. Preserve the exact meaning, speaker, and direction. "
-            "Do not add facts."
-        ),
-        "hearing_to_deaf": (
-            "Rewrite the user's message using very simple, direct wording for a deaf "
-            "or hard-of-hearing person who may prefer short clear text. Preserve the exact "
-            "meaning, speaker, and direction. Keep it respectful."
-        ),
-        "suggestions": (
-            "Suggest useful ready-to-send phrases or short replies for the selected context. "
-            "If the user text describes a situation, tailor the suggestions to it."
-        ),
-    }
-    return instructions[mode]
-
-
-def _fallback_assist(request: AssistRequest) -> str:
+def _resolve_language(request: AssistRequest) -> Literal["ar", "en"]:
     text = request.text.strip()
-    if request.mode == "deaf_to_hearing":
-        return text or "Please write the idea you want to communicate."
-    if request.mode == "hearing_to_deaf":
-        return text or "Please write the message you want simplified."
-    return "\n".join(
-        [
-            "1. I need help.",
-            "2. Please explain more simply.",
-            "3. Can you write that down?",
-            "4. I need a moment.",
-        ]
-    )
+    if request.language in {"ar", "en"}:
+        return request.language
+    if ARABIC_RE.search(text):
+        return "ar"
+    if LATIN_RE.search(text):
+        return "en"
+    return "ar"
 
 
-def _build_assistant_prompt(request: AssistRequest) -> str:
-    language_note = {
-        "auto": "Respond in the same language as the user text. If there is no user text, use Arabic.",
-        "ar": "Respond in Arabic only.",
-        "en": "Respond in English only.",
-        "both": "Respond in Arabic first, then English.",
-    }[request.language]
+def _build_assistant_prompt(request: AssistRequest, language: Literal["ar", "en"]) -> str:
+    text = request.text.strip() or ("اكتب اقتراحات قصيرة مناسبة." if language == "ar" else "Write short useful suggestions.")
 
-    return f"""You are an assistive communication writing assistant.
-You help deaf and hard-of-hearing users communicate clearly.
-You are not a doctor and you must not diagnose medical conditions.
-Your most important rule: preserve the original meaning exactly.
-Do not invert who understood whom, who needs help, or who did an action.
-Use simple words and short sentences. Do not explain your reasoning.
-If the task asks for suggestions, return 3 to 5 numbered options only.
+    prompts = {
+        ("deaf_to_hearing", "ar"): f"""أنت مساعد كتابة للتواصل مع الأشخاص السامعين.
+المهمة: حوّل رسالة المستخدم القصيرة أو غير المرتبة إلى جملة عربية واضحة وطبيعية.
+القواعد: اكتب بالعربية فقط. حافظ على المعنى والفاعل والاتجاه كما هي. لا تضف تشخيصا أو معلومات جديدة. لا تعكس المعنى.
+مثال جيد:
+الإدخال: دكتور انا ما فهم كلام دواء
+الإجابة: دكتور، لم أفهم تعليمات الدواء. من فضلك اشرحها لي بطريقة أبسط.
+مثال سيئ لمعنى معكوس: الطبيب لم يفهمني.
+الإدخال: {text}
+الإجابة:""",
+        ("deaf_to_hearing", "en"): f"""You are a communication writing assistant for hearing readers.
+Task: rewrite the user's rough or short message as one clear, natural English sentence.
+Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add diagnosis or new facts. Do not reverse the meaning.
+Good example:
+Input: I no understand medicine words doctor
+Answer: Doctor, I did not understand the medicine instructions. Please explain them more simply.
+Bad reversed meaning: The doctor did not understand me.
+Input: {text}
+Answer:""",
+        ("hearing_to_deaf", "ar"): f"""أنت مساعد كتابة للتواصل مع شخص أصم أو ضعيف السمع.
+المهمة: بسّط رسالة المستخدم إلى عربية قصيرة ومباشرة ومحترمة.
+القواعد: اكتب بالعربية فقط. حافظ على المعنى والفاعل والاتجاه كما هي. لا تضف معلومات جديدة.
+مثال:
+الإدخال: يجب أن تتناول الدواء بعد الأكل مرتين يوميا وإذا استمر الألم راجع الطبيب
+الإجابة: خذ الدواء بعد الأكل مرتين في اليوم. إذا بقي الألم، راجع الطبيب.
+الإدخال: {text}
+الإجابة:""",
+        ("hearing_to_deaf", "en"): f"""You are a communication assistant for deaf or hard-of-hearing readers.
+Task: simplify the user's message into short, direct, respectful English.
+Rules: write English only. Preserve the exact meaning, speaker, and direction. Do not add new facts.
+Example:
+Input: The patient should take the medicine after food twice daily and should return if the pain continues.
+Answer: Take the medicine after food two times a day. If the pain continues, see the doctor.
+Input: {text}
+Answer:""",
+        ("suggestions", "ar"): f"""أنت مساعد يكتب عبارات جاهزة للإرسال في محادثة طبية أو يومية.
+المهمة: أعط 3 إلى 5 اقتراحات عربية قصيرة ومرقمة تناسب النص.
+القواعد: اكتب بالعربية فقط. لا تستخدم الصينية أو الإنجليزية. اجعل كل اقتراح جاهزا للإرسال.
+مثال:
+الإدخال: انا في المستشفى واريد اسأل عن موعدي
+الإجابة:
+1. متى موعدي؟
+2. أين أنتظر؟
+3. هل تأخر موعدي؟
+الإدخال: {text}
+الإجابة:""",
+        ("suggestions", "en"): f"""You write ready-to-send chat phrases for medical or everyday communication.
+Task: give 3 to 5 short numbered English suggestions that fit the text.
+Rules: write English only. Each suggestion must be ready to send.
+Example:
+Input: I am at the hospital and want to ask about my appointment
+Answer:
+1. When is my appointment?
+2. Where should I wait?
+3. Has my appointment been delayed?
+Input: {text}
+Answer:""",
+    }
+    return prompts[(request.mode, language)]
 
-Examples:
-Input: I did not understand the doctor
-Good output: I did not understand the doctor. Please explain in a simpler way.
-Good Arabic output if Arabic is requested: لم أفهم كلام الطبيب. من فضلك اشرح لي بطريقة أبسط.
-Bad output: The doctor did not understand me.
 
-Input: The patient should take the medicine after food
-Good output: Take the medicine after food.
-Bad output: The patient gave the medicine to the doctor.
+def _deterministic_fallback(request: AssistRequest, language: Literal["ar", "en"]) -> str:
+    text = request.text.strip()
+    if request.mode in {"deaf_to_hearing", "hearing_to_deaf"}:
+        if text:
+            return text
+        return "اكتب الرسالة التي تريد إرسالها." if language == "ar" else "Write the message you want to send."
 
-Task: {_assistant_instruction(request.mode)}
-Context: {request.context}
-Language: {language_note}
+    lowered = text.lower()
+    if language == "ar":
+        if "موعد" in text:
+            return "\n".join(["1. متى موعدي؟", "2. أين أنتظر؟", "3. هل تأخر موعدي؟", "4. من فضلك أخبرني عندما يحين دوري."])
+        if "دواء" in text or "علاج" in text:
+            return "\n".join(["1. متى آخذ الدواء؟", "2. كم مرة آخذ الدواء؟", "3. هل آخذه قبل الأكل أو بعده؟", "4. من فضلك اكتب تعليمات الدواء."])
+        if "ألم" in text or "الم" in text or "وجع" in text:
+            return "\n".join(["1. أشعر بألم.", "2. الألم قوي.", "3. أحتاج مساعدة من فضلك.", "4. هل يمكن أن تشرح لي ماذا أفعل؟"])
+        return "\n".join(["1. أحتاج مساعدة.", "2. من فضلك اشرح بطريقة أبسط.", "3. هل يمكنك كتابة الكلام؟", "4. أحتاج دقيقة من فضلك."])
 
-User text:
-{request.text.strip() or "(no user text provided)"}
+    if "appointment" in lowered:
+        return "\n".join(["1. When is my appointment?", "2. Where should I wait?", "3. Has my appointment been delayed?", "4. Please tell me when it is my turn."])
+    if "medicine" in lowered or "medication" in lowered:
+        return "\n".join(["1. When should I take the medicine?", "2. How many times should I take it?", "3. Should I take it before or after food?", "4. Please write the medicine instructions."])
+    if "pain" in lowered or "hurt" in lowered:
+        return "\n".join(["1. I am in pain.", "2. The pain is strong.", "3. I need help, please.", "4. Can you explain what I should do?"])
+    return "\n".join(["1. I need help.", "2. Please explain more simply.", "3. Can you write that down?", "4. I need a moment."])
 
-Return only the final helpful text. Keep it concise and practical."""
+
+def _output_is_wrong_script(output: str, language: Literal["ar", "en"]) -> bool:
+    if CJK_RE.search(output):
+        return True
+
+    if language == "ar":
+        arabic_count = len(ARABIC_RE.findall(output))
+        latin_count = len(LATIN_RE.findall(output))
+        return arabic_count == 0 or latin_count > arabic_count
+
+    return False
 
 
 @app.post("/ai/assist", response_model=AssistResponse)
 def assist_message(request: AssistRequest):
-    prompt = _build_assistant_prompt(request)
+    language = _resolve_language(request)
+    prompt = _build_assistant_prompt(request, language)
 
     try:
         response = requests.post(
@@ -404,8 +451,10 @@ def assist_message(request: AssistRequest):
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.3,
+                    "temperature": 0.0,
+                    "top_p": 1.0,
                     "num_predict": 220,
+                    "stop": ["\n\n\n", "Input:", "الإدخال:"],
                 },
             },
             timeout=90,
@@ -414,18 +463,22 @@ def assist_message(request: AssistRequest):
         output = str(response.json().get("response", "")).strip()
         if not output:
             raise ValueError("Empty response from assistant model")
+        source = "ollama"
+        if _output_is_wrong_script(output, language):
+            output = _deterministic_fallback(request, language)
+            source = "fallback"
         return AssistResponse(
             mode=request.mode,
             context=request.context,
             output=output,
             model=ASSISTANT_MODEL,
-            source="ollama",
+            source=source,
         )
     except Exception:
         return AssistResponse(
             mode=request.mode,
             context=request.context,
-            output=_fallback_assist(request),
+            output=_deterministic_fallback(request, language),
             model=ASSISTANT_MODEL,
             source="fallback",
         )

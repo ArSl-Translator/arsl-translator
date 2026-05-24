@@ -331,7 +331,7 @@ fun ChatScreen(
                                                     text = message.content,
                                                     mode = aiMode,
                                                     context = "chat",
-                                                    language = "auto"
+                                                    language = aiClient.detectLanguage(message.content)
                                                 )
                                             }.onSuccess { result ->
                                                 aiOutputs = aiOutputs + (message.id to result.output)
@@ -393,13 +393,14 @@ fun ChatScreen(
                     IconButton(
                         onClick = {
                             aiStatus = "Generating suggestions..."
+                            val suggestionLanguage = if (messageText.isBlank()) "ar" else aiClient.detectLanguage(messageText)
                             scope.launch {
                                 runCatching {
                                     aiClient.assist(
                                         text = messageText,
                                         mode = "suggestions",
                                         context = "chat",
-                                        language = "auto"
+                                        language = suggestionLanguage
                                     )
                                 }.onSuccess { result ->
                                     messageText = result.output
