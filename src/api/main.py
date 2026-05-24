@@ -325,11 +325,13 @@ def _assistant_instruction(mode: str) -> str:
     instructions = {
         "deaf_to_hearing": (
             "Rewrite the user's rough or short message into a clear, natural sentence "
-            "for a hearing person. Preserve the meaning. Do not add facts."
+            "for a hearing person. Preserve the exact meaning, speaker, and direction. "
+            "Do not add facts."
         ),
         "hearing_to_deaf": (
             "Rewrite the user's message using very simple, direct wording for a deaf "
-            "or hard-of-hearing person who may prefer short clear text. Keep it respectful."
+            "or hard-of-hearing person who may prefer short clear text. Preserve the exact "
+            "meaning, speaker, and direction. Keep it respectful."
         ),
         "phrasebook": (
             "Create a compact phrasebook for the selected context. Include practical "
@@ -379,6 +381,18 @@ def _build_assistant_prompt(request: AssistRequest) -> str:
     return f"""You are an assistive communication writing assistant.
 You help deaf and hard-of-hearing users communicate clearly.
 You are not a doctor and you must not diagnose medical conditions.
+Your most important rule: preserve the original meaning exactly.
+Do not invert who understood whom, who needs help, or who did an action.
+If the input is in English and the requested language is Arabic, translate the same meaning into simple Arabic.
+
+Examples:
+Input: I did not understand the doctor
+Good Arabic output: لم أفهم كلام الطبيب. من فضلك اشرح لي بطريقة أبسط.
+Bad Arabic output: الطبيب لم يفهمني
+
+Input: The patient should take the medicine after food
+Good Arabic output: خذ الدواء بعد الأكل.
+Bad Arabic output: المريض أعطى الدواء للطبيب
 
 Task: {_assistant_instruction(request.mode)}
 Context: {request.context}
