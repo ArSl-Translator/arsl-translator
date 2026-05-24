@@ -6,23 +6,23 @@ const apkUrl = '/downloads/accessible-chat.apk';
 const features = [
   {
     icon: WifiOff,
-    title: 'No internet required',
-    text: 'Nearby Android devices communicate directly over Bluetooth Classic sockets.',
+    title: 'Works without internet',
+    text: 'Start a nearby conversation even when Wi-Fi and mobile data are unavailable.',
   },
   {
     icon: RadioTower,
-    title: 'Server and client roles',
-    text: 'One phone waits as the Bluetooth server while the other connects as the client.',
+    title: 'Nearby device pairing',
+    text: 'One person opens a chat session and the other joins from a nearby Android phone.',
   },
   {
     icon: FileArchive,
-    title: 'Binary transfer',
-    text: 'The protocol supports framed text and media payloads for practical offline exchange.',
+    title: 'Text and media sharing',
+    text: 'Exchange messages and helpful media during face-to-face communication.',
   },
   {
     icon: Database,
-    title: 'Local history',
-    text: 'Room stores conversations on device so chats remain available after reconnecting.',
+    title: 'On-device history',
+    text: 'Conversations stay available on the phone for later reference.',
   },
 ];
 
@@ -32,32 +32,29 @@ const OfflineChatPage = () => {
       <div className="panel overflow-hidden">
         <div className="grid gap-6 border-b border-gray-200 bg-white p-6 lg:grid-cols-[1fr_360px]">
           <div>
-            <p className="section-title">Companion mobile system</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">Offline Bluetooth chat for nearby communication</h2>
+            <p className="section-title">Mobile companion</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">Accessible Chat for nearby communication</h2>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-500">
-              The Android app adds a distributed-systems layer to the translator: socket programming,
-              background transfer threads, Bluetooth discovery, and patient-assistant style text communication
-              without Wi-Fi, mobile data, or sign language knowledge.
+              A companion Android app that helps people communicate with someone beside them using text and
+              media, even when there is no internet connection. It is built for quick, private, face-to-face
+              conversations in clinics, classrooms, public services, and everyday settings.
             </p>
           </div>
+
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-5">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-950 text-white">
                 <Bluetooth className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold text-gray-950">Android project</p>
-                <p className="text-xs font-medium text-gray-500">Kotlin, Jetpack Compose, Room</p>
+                <p className="text-sm font-bold text-gray-950">Accessible Chat for Android</p>
+                <p className="text-xs font-medium text-gray-500">Private nearby messaging</p>
               </div>
             </div>
-            <code className="mt-4 block rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
-              offline-chat-android/
-            </code>
-            <a
-              href={apkUrl}
-              download="accessible-chat.apk"
-              className="btn-primary mt-4 w-full"
-            >
+            <p className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-6 text-gray-600">
+              Install on two Android phones, choose complementary roles, and start communicating nearby.
+            </p>
+            <a href={apkUrl} download="accessible-chat.apk" className="btn-primary mt-4 w-full">
               <Download className="h-4 w-4" />
               Download Android APK
             </a>
@@ -79,12 +76,12 @@ const OfflineChatPage = () => {
         <div className="card">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-gray-600" />
-            <h3 className="text-lg font-bold text-gray-950">What it demonstrates</h3>
+            <h3 className="text-lg font-bold text-gray-950">Designed for real conversations</h3>
           </div>
           <div className="mt-4 space-y-3 text-sm leading-6 text-gray-600">
-            <p>Bluetooth RFCOMM socket setup with explicit server/client behavior.</p>
-            <p>Threaded listening and transfer loops so the UI remains responsive while messages arrive.</p>
-            <p>Structured local storage for conversations, messages, and media metadata.</p>
+            <p>Use one phone for the person who needs assistance and another for the person helping nearby.</p>
+            <p>Messages appear in a familiar chat interface with connection status always visible.</p>
+            <p>Conversation history remains on the device, so important context is not lost after reconnecting.</p>
           </div>
         </div>
 

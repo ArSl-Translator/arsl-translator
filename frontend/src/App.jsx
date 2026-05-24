@@ -74,10 +74,10 @@ function AppShell({ user, apiStatus, authLoading }) {
             <div className="mt-auto rounded-lg border border-gray-200 bg-white p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                Local-first assistive layer
+                Built for accessible communication
               </div>
               <p className="mt-2 text-xs leading-5 text-gray-500">
-                Trained landmark models, browser capture, and Bluetooth mobile chat in one platform.
+                Translate signs, review predictions, and support nearby conversations from one secure platform.
               </p>
             </div>
           </aside>
@@ -99,7 +99,7 @@ function AppShell({ user, apiStatus, authLoading }) {
                     </div>
                   </div>
                   <div className="hidden lg:block">
-                    <p className="section-title">Recognition workspace</p>
+                    <p className="section-title">Communication platform</p>
                     <h2 className="mt-1 text-2xl font-bold tracking-tight text-gray-950">
                       Translate signs from video, webcam, or offline chat.
                     </h2>
@@ -125,7 +125,7 @@ function AppShell({ user, apiStatus, authLoading }) {
 
               {apiStatus.status === 'online' && !apiStatus.modelLoaded && (
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-                  API is online, but no model checkpoint is loaded.
+                  Recognition services are online, but no translation model is currently available.
                 </div>
               )}
             </div>

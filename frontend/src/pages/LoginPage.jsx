@@ -34,7 +34,7 @@ export default function LoginPage() {
           <Sparkles className="h-5 w-5" />
         </div>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-gray-950">ArSL Studio</h1>
-        <p className="mt-2 text-sm text-gray-500">Arabic sign recognition workspace</p>
+        <p className="mt-2 text-sm text-gray-500">Arabic sign translation and accessible communication</p>
       </div>
 
       <div className="panel overflow-hidden">

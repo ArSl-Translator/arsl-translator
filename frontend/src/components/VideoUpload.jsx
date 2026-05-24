@@ -57,7 +57,7 @@ const VideoUpload = () => {
               <p className="section-title">Video intelligence</p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-950">Upload a sign video</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-                Run the trained landmark classifier on isolated Arabic sign clips and inspect the ranked predictions.
+                Upload an Arabic sign clip and receive ranked translation results with confidence scores.
               </p>
             </div>
             <div className="hidden rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-600 sm:block">
