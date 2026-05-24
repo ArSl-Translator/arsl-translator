@@ -528,6 +528,83 @@ def _output_is_wrong_script(output: str, language: Literal["ar", "en"]) -> bool:
     return False
 
 
+def _clean_assistant_output(
+    output: str,
+    request: AssistRequest,
+    language: Literal["ar", "en"],
+) -> str:
+    cleaned = output.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+    hard_cut_markers = [
+        "←",
+        "\nالإجابة:",
+        "\nAnswer:",
+        "\nInput:",
+        "\nالإدخال:",
+        "\nمثال",
+        "\nBad ",
+        "\nGood ",
+        "\nRules:",
+        "\nTask:",
+        "\nالقواعد:",
+        "\nالمهمة:",
+        "\nمثال",
+    ]
+    inline_cut_markers = [
+        " يجب إعادة",
+        " لا تتحدث",
+        " حافظ على",
+        " المعنى صحيح",
+        " المعنى واضح",
+        " الإجابة:",
+        " كيف يمكنني مساعدتك؟",
+        " هل يمكنك كتابة الرسالة؟",
+        " لكن يمكنني مساعدتك",
+    ]
+
+    for marker in hard_cut_markers + inline_cut_markers:
+        index = cleaned.find(marker)
+        if index > 0:
+            cleaned = cleaned[:index].strip()
+
+    cleaned = cleaned.replace("دواعش شديدة", "دوار شديد").replace("دواعش", "دوار")
+
+    if request.mode == "suggestions":
+        cleaned = _clean_suggestions_output(cleaned, language)
+    else:
+        cleaned = cleaned.splitlines()[0].strip() if cleaned.splitlines() else cleaned
+
+    cleaned = cleaned.strip(" \n\t:-")
+    return cleaned
+
+
+def _clean_suggestions_output(output: str, language: Literal["ar", "en"]) -> str:
+    blocked = (
+        "كيف يمكنني مساعدتك",
+        "هل تحتاج",
+        "do you need",
+        "how can i help",
+    )
+    lines = []
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if any(pattern.lower() in line.lower() for pattern in blocked):
+            continue
+        lines.append(line)
+
+    if not lines:
+        return ""
+
+    numbered = []
+    for index, line in enumerate(lines[:5], start=1):
+        line = re.sub(r"^\s*\d+\s*[\.\)-]\s*", "", line).strip()
+        if line:
+            numbered.append(f"{index}. {line}")
+    return "\n".join(numbered)
+
+
 @app.post("/ai/assist", response_model=AssistResponse)
 def assist_message(request: AssistRequest):
     language = _resolve_language(request)
@@ -542,9 +619,23 @@ def assist_message(request: AssistRequest):
                 "stream": False,
                 "options": {
                     "temperature": 0.0,
-                    "top_p": 1.0,
-                    "num_predict": 220,
-                    "stop": ["\n\n\n", "Input:", "\u0627\u0644\u0625\u062f\u062e\u0627\u0644:"],
+                    "top_p": 0.6,
+                    "num_predict": 140 if request.mode == "suggestions" else 80,
+                    "stop": [
+                        "\n\n\n",
+                        "←",
+                        "Input:",
+                        "Answer:",
+                        "Bad ",
+                        "Good ",
+                        "Rules:",
+                        "Task:",
+                        "\u0627\u0644\u0625\u062f\u062e\u0627\u0644:",
+                        "\u0627\u0644\u0625\u062c\u0627\u0628\u0629:",
+                        "\u0645\u062b\u0627\u0644",
+                        "\u0627\u0644\u0642\u0648\u0627\u0639\u062f:",
+                        "\u0627\u0644\u0645\u0647\u0645\u0629:",
+                    ],
                 },
             },
             timeout=90,
@@ -556,6 +647,14 @@ def assist_message(request: AssistRequest):
             raise ValueError("Empty response from assistant model")
 
         source = "ollama"
+        cleaned_output = _clean_assistant_output(output, request, language)
+        if cleaned_output and cleaned_output != output:
+            output = cleaned_output
+            source = "ollama_cleaned"
+        elif not cleaned_output:
+            output = _deterministic_fallback(request, language)
+            source = "fallback"
+
         if _output_is_wrong_script(output, language):
             print(f"[AI assist] Wrong script for lang={language}, falling back. Output was: {output[:80]!r}")
             output = _deterministic_fallback(request, language)
