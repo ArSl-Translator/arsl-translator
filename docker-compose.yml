@@ -23,6 +23,8 @@ services:
       - LABELS_XLSX=/app/data/raw/labels/KARSL-502_Labels.xlsx
       - OUTPUT_DIR=/app/outputs/index
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - OLLAMA_URL=http://ollama:11434
+      - ASSISTANT_MODEL=qwen2.5:1.5b
       - DATABASE_URL=postgresql://arsl_user:arsl_password@postgres:5432/arsl_db
       - JWT_SECRET_KEY=change-me-in-production-use-openssl-rand
       - JWT_ALGORITHM=HS256
@@ -44,6 +46,7 @@ services:
       - ./scripts:/app/scripts        # Mount scripts for development
     depends_on:
       - mlflow
+      - ollama
       - postgres
 
   mlflow:
@@ -59,6 +62,14 @@ services:
       --artifacts-destination /mlflow/artifacts
     volumes:
       - ./mlruns:/mlflow
+
+  ollama:
+    image: ollama/ollama:0.5.13
+    container_name: arsl_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
 
   frontend:
     image: node:18-alpine
@@ -77,3 +88,4 @@ services:
 
 volumes:
   pgdata:
+  ollama_models:

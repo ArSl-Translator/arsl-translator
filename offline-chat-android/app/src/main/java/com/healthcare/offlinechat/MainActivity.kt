@@ -16,9 +16,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.healthcare.offlinechat.ui.screens.AiAssistantScreen
 import com.healthcare.offlinechat.ui.screens.ChatScreen
 import com.healthcare.offlinechat.ui.screens.ConversationListScreen
 import com.healthcare.offlinechat.ui.screens.DeviceListScreen
@@ -82,8 +86,15 @@ class MainActivity : ComponentActivity() {
                     val scannedDevices by viewModel.scannedDevices.collectAsState()
                     val currentConversationId by viewModel.currentConversationId.collectAsState()
                     val connectedDevice by viewModel.connectedDevice.collectAsState()
+                    var showAiAssistant by remember { mutableStateOf(false) }
 
                     when {
+                        showAiAssistant -> {
+                            AiAssistantScreen(
+                                onBack = { showAiAssistant = false }
+                            )
+                        }
+
                         userRole == null -> {
                             HomeScreen(
                                 onRoleSelected = { role ->
@@ -93,7 +104,8 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                     viewModel.setRole(role)
-                                }
+                                },
+                                onOpenAssistant = { showAiAssistant = true }
                             )
                         }
 

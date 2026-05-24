@@ -29,6 +29,8 @@ services:
       LABELS_XLSX: /app/data/raw/labels/KARSL-502_Labels.xlsx
       OUTPUT_DIR: /app/outputs/index
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      OLLAMA_URL: http://ollama:11434
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-qwen2.5:1.5b}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_ALGORITHM: HS256
@@ -49,6 +51,8 @@ services:
       postgres:
         condition: service_healthy
       mlflow:
+        condition: service_started
+      ollama:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()\""]
@@ -72,6 +76,15 @@ services:
       --static-prefix /mlflow
     volumes:
       - ./mlruns:/mlflow
+
+  ollama:
+    image: ollama/ollama:0.5.13
+    container_name: arsl_ollama_prod
+    restart: unless-stopped
+    expose:
+      - "11434"
+    volumes:
+      - ollama_models:/root/.ollama
 
   frontend:
     build:
@@ -109,3 +122,4 @@ volumes:
   pgdata_prod:
   caddy_data:
   caddy_config:
+  ollama_models:

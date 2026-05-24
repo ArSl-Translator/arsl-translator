@@ -7,6 +7,7 @@ This deployment runs the full ArSL platform on one VM:
 - FastAPI serves `/api/*` for inference, auth, history, and audio files.
 - PostgreSQL stores users and prediction history.
 - MLflow serves experiment and model tracking at `/mlflow`.
+- Ollama runs a small local open-source language model for Assistive Message Studio.
 - Model checkpoints stay on the VM under `models/` and are mounted into the API container.
 
 ## 1. DNS
@@ -58,6 +59,7 @@ POSTGRES_DB=arsl_db
 JWT_SECRET_KEY=<output-of-openssl-rand-hex-32>
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 KARSL_MEDIAPIPE_MIRROR_INPUT=true
+ASSISTANT_MODEL=qwen2.5:1.5b
 ```
 
 Generate strong values on the VM:
@@ -118,7 +120,28 @@ https://arsl.hadighazi.com/mlflow
 
 You should see a `serving_models` experiment with runs for the current KArSL MediaPipe and ArabSign checkpoints. If you only want metadata and do not want to upload the checkpoint files into MLflow artifacts, add `--skip_artifacts`.
 
-## 6. GitHub Actions CI/CD
+## 6. Assistive Message Studio
+
+The production stack includes Ollama for the optional AI writing assistant used by the Android app. Pull the model once after deployment:
+
+```bash
+cd ~/arsl-translator
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d ollama
+docker compose -f docker-compose.prod.yml --env-file .env.production exec ollama \
+  ollama pull qwen2.5:1.5b
+```
+
+Test the API endpoint:
+
+```bash
+curl -X POST https://arsl.hadighazi.com/api/ai/assist \
+  -H "Content-Type: application/json" \
+  -d '{"text":"I did not understand the doctor","mode":"hearing_to_deaf","context":"clinic","language":"ar"}'
+```
+
+The Android app still works without this model; only the optional AI writing assistant needs internet access to the deployed API.
+
+## 7. GitHub Actions CI/CD
 
 Add these repository secrets in GitHub:
 
@@ -140,12 +163,13 @@ After that, every push to `main` will:
 
 You can also trigger the workflow manually from GitHub Actions -> Deploy -> Run workflow.
 
-## 7. Useful Commands
+## 8. Useful Commands
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production ps
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f api
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f caddy
 docker compose -f docker-compose.prod.yml --env-file .env.production logs -f mlflow
+docker compose -f docker-compose.prod.yml --env-file .env.production logs -f ollama
 docker compose -f docker-compose.prod.yml --env-file .env.production down
 ```

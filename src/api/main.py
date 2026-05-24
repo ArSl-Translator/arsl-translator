@@ -1,10 +1,11 @@
 import base64
 import os
 import tempfile
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Literal, Optional, Set
 
 import cv2
 import numpy as np
+import requests
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +26,11 @@ from src.api.karsl_mediapipe_inference import (
 from src.api.models.user import User
 from src.utils.generate_audio import generate_all_audio
 
-app = FastAPI(title="ArSL Translator API", version="0.2.0")
+app = FastAPI(title="ArSL Translator API", version="0.3.0")
+
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
+ASSISTANT_MODEL = os.environ.get("ASSISTANT_MODEL", "qwen2.5:1.5b")
+
 
 def _cors_origins() -> List[str]:
     configured = os.environ.get("CORS_ALLOW_ORIGINS", "")
@@ -213,6 +218,10 @@ def health():
         "models": models,
         "mediapipe_pose_model_available": mediapipe_model_available(),
         "mediapipe_hand_model_available": os.path.isfile(HAND_LANDMARKER_MODEL_PATH),
+        "assistant": {
+            "model": ASSISTANT_MODEL,
+            "url": OLLAMA_URL,
+        },
     }
 
 
@@ -287,3 +296,134 @@ def _decode_frame(frame_b64: str, idx: int, total: int) -> np.ndarray:
         return frame
     except Exception as exc:
         raise ValueError(f"Failed to decode frame {idx}/{total}: {exc}")
+
+
+AssistantMode = Literal[
+    "deaf_to_hearing",
+    "hearing_to_deaf",
+    "phrasebook",
+    "smart_replies",
+]
+
+
+class AssistRequest(BaseModel):
+    text: str = ""
+    mode: AssistantMode = "deaf_to_hearing"
+    context: str = "general"
+    language: Literal["ar", "en", "both"] = "ar"
+
+
+class AssistResponse(BaseModel):
+    mode: str
+    context: str
+    output: str
+    model: str
+    source: str
+
+
+def _assistant_instruction(mode: str) -> str:
+    instructions = {
+        "deaf_to_hearing": (
+            "Rewrite the user's rough or short message into a clear, natural sentence "
+            "for a hearing person. Preserve the meaning. Do not add facts."
+        ),
+        "hearing_to_deaf": (
+            "Rewrite the user's message using very simple, direct wording for a deaf "
+            "or hard-of-hearing person who may prefer short clear text. Keep it respectful."
+        ),
+        "phrasebook": (
+            "Create a compact phrasebook for the selected context. Include practical "
+            "ready-to-send phrases."
+        ),
+        "smart_replies": (
+            "Suggest short useful replies for the selected context. The replies should "
+            "be easy to send in a nearby conversation."
+        ),
+    }
+    return instructions[mode]
+
+
+def _fallback_assist(request: AssistRequest) -> str:
+    text = request.text.strip()
+    if request.mode == "deaf_to_hearing":
+        return text or "Please write the idea you want to communicate."
+    if request.mode == "hearing_to_deaf":
+        return text or "Please write the message you want simplified."
+    if request.mode == "phrasebook":
+        return "\n".join(
+            [
+                "1. I need help.",
+                "2. Please write the information for me.",
+                "3. I did not understand. Please explain simply.",
+                "4. I cannot hear clearly.",
+                "5. Is this urgent?",
+            ]
+        )
+    return "\n".join(
+        [
+            "Yes, I understand.",
+            "Please explain more simply.",
+            "Can you write that down?",
+            "I need a moment.",
+        ]
+    )
+
+
+def _build_assistant_prompt(request: AssistRequest) -> str:
+    language_note = {
+        "ar": "Respond in Arabic only.",
+        "en": "Respond in English only.",
+        "both": "Respond in Arabic first, then English.",
+    }[request.language]
+
+    return f"""You are an assistive communication writing assistant.
+You help deaf and hard-of-hearing users communicate clearly.
+You are not a doctor and you must not diagnose medical conditions.
+
+Task: {_assistant_instruction(request.mode)}
+Context: {request.context}
+Language: {language_note}
+
+User text:
+{request.text.strip() or "(no user text provided)"}
+
+Return only the final helpful text. Keep it concise and practical."""
+
+
+@app.post("/ai/assist", response_model=AssistResponse)
+def assist_message(request: AssistRequest):
+    prompt = _build_assistant_prompt(request)
+
+    try:
+        response = requests.post(
+            f"{OLLAMA_URL.rstrip('/')}/api/generate",
+            json={
+                "model": ASSISTANT_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.3,
+                    "num_predict": 220,
+                },
+            },
+            timeout=90,
+        )
+        response.raise_for_status()
+        output = str(response.json().get("response", "")).strip()
+        if not output:
+            raise ValueError("Empty response from assistant model")
+        return AssistResponse(
+            mode=request.mode,
+            context=request.context,
+            output=output,
+            model=ASSISTANT_MODEL,
+            source="ollama",
+        )
+    except Exception:
+        return AssistResponse(
+            mode=request.mode,
+            context=request.context,
+            output=_fallback_assist(request),
+            model=ASSISTANT_MODEL,
+            source="fallback",
+        )
