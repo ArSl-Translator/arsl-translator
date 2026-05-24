@@ -1,68 +1,95 @@
 # Assistant Fine-Tuning Workflow
 
-This folder contains the optional fine-tuning workflow for the Assistive Message Studio model used by the Android Bluetooth chat app.
+This folder contains the optional fine-tuning workflow for Assistive Message Studio, the chat-integrated generative AI layer used by the Android Bluetooth app.
 
-The goal is to improve the local open-source Ollama assistant used by:
+The assistant is served by:
 
-- `POST /api/ai/assist`
-- Android message actions: `Make clearer`, `Simplify`
+```text
+POST /api/ai/assist
+```
+
+It is used by:
+
+- Android message action: `Make clearer`
+- Android message action: `Simplify`
 - Android composer suggestions
 
-The current production model is usually:
+## Current Models
+
+Base model:
 
 ```env
 ASSISTANT_MODEL=qwen2.5:1.5b
 ```
 
-The fine-tuned model name used by these scripts is:
+Fine-tuned model:
 
 ```env
 ASSISTANT_MODEL=qwen25-healthcare
 ```
 
+The fine-tuned model is a LoRA fine-tune of:
+
+```text
+Qwen/Qwen2.5-1.5B-Instruct
+```
+
+The Colab script merges the LoRA adapter into the base model, converts it to GGUF, quantizes it to Q4_K_M, and registers it with Ollama on the VM.
+
 ## Files
 
 ```text
 scripts/assistant_finetune/
-  dataset.jsonl          Small supervised dataset for the 3 assistant modes
-  colab_finetune.py      Colab notebook-style script for LoRA fine-tuning
-  before_after_eval.py   Live API evaluator for baseline vs fine-tuned model
-  deploy_to_vm.sh        VM deployment script for registering GGUF with Ollama
+  dataset.jsonl          Supervised examples for the 3 assistant modes
+  colab_finetune.py      One-cell Google Colab LoRA fine-tuning script
+  before_after_eval.py   Live API evaluator for base vs fine-tuned behavior
+  deploy_to_vm.sh        VM script that registers the GGUF model with Ollama
 ```
 
-## What The Dataset Teaches
+## Assistant Modes
 
-The dataset covers the observed bugs:
+| Mode | User flow | Expected behavior |
+|---|---|---|
+| `deaf_to_hearing` | Assisted user sends rough wording to a hearing person | Rewrite the same meaning as clear natural language |
+| `hearing_to_deaf` | Hearing person sends a longer message to the assisted user | Simplify into short direct language |
+| `suggestions` | User taps the composer sparkle button | Produce 3 to 5 ready-to-send messages from the user's voice |
 
-- Arabic output must stay Arabic.
-- English output must stay English.
-- The model must not output Chinese/CJK text.
-- `deaf_to_hearing` rewrites the patient's words; it must not answer like a helper.
-- `suggestions` are ready-to-send messages from the patient/user, not hospital staff replies.
-- The model must not reverse meaning.
+The model must preserve the speaker and direction. For example, if the user writes that they did not understand the doctor, the model must not reverse it into "the doctor did not understand me."
 
-Examples of bugs the fine-tune is meant to reduce:
+## Dataset Goal
+
+The dataset targets observed production bugs:
+
+- Arabic input sometimes produced English or Chinese output.
+- Arabic `deaf_to_hearing` sometimes produced helper-style replies instead of rewrites.
+- Suggestions sometimes sounded like hospital staff, not the patient.
+- The model sometimes reversed who understood whom.
+- The model sometimes leaked prompt text or training annotations.
+
+Examples:
 
 ```text
 Input: انا الم بطني قوي
-Bad: I have a strong bladder.
-Good: أشعر بألم شديد في بطني.
+Expected: أشعر بألم شديد في بطني.
 
 Input: دكتور انا ما فهم كلام دواء
-Bad: The doctor did not understand me.
-Good: دكتور، لم أفهم تعليمات الدواء.
+Expected: دكتور، لم أفهم تعليمات الدواء. من فضلك اشرحها لي بطريقة أبسط.
 
 Input: انا في المستشفى واريد اسأل عن موعدي
-Bad: 请问您的预约时间是什么时候?
-Good:
+Expected:
 1. متى موعدي؟
 2. أين أنتظر؟
 3. هل تأخر موعدي؟
 ```
 
-## Step 1: Capture Baseline On The VM
+Important dataset hygiene:
 
-SSH into the VM or use browser SSH:
+- Do not include arrows such as `←` in target outputs.
+- Do not include comments like "good", "bad", "correct", or "wrong" in target outputs.
+- Do not include explanations of why an answer is correct.
+- Target outputs should contain only the final user-facing message.
+
+## Step 1: Capture Baseline On The VM
 
 ```bash
 cd ~/arsl-translator
@@ -71,29 +98,27 @@ python3 scripts/assistant_finetune/before_after_eval.py > baseline_results.txt
 cat baseline_results.txt
 ```
 
-This calls the live deployed API:
+The evaluator calls:
 
 ```text
 https://arsl.hadighazi.com/api/ai/assist
 ```
 
-To evaluate a different URL:
+To evaluate a local API instead:
 
 ```bash
 ASSIST_EVAL_URL=http://localhost:8000/api/ai/assist \
 python3 scripts/assistant_finetune/before_after_eval.py
 ```
 
-Keep `baseline_results.txt` for the presentation.
-
 ## Step 2: Fine-Tune In Google Colab
 
-Use Colab because the VM is CPU-only and the model fine-tune needs a GPU.
+Use Colab because a free T4 GPU can run the LoRA fine-tune while the VM is not sized for GPU training.
 
-1. Open <https://colab.research.google.com>
+1. Open <https://colab.research.google.com>.
 2. Create a new notebook.
 3. Runtime -> Change runtime type -> `T4 GPU`.
-4. Upload this dataset from the repo:
+4. Upload:
 
 ```text
 scripts/assistant_finetune/dataset.jsonl
@@ -105,43 +130,43 @@ scripts/assistant_finetune/dataset.jsonl
 scripts/assistant_finetune/colab_finetune.py
 ```
 
-6. Paste each `CELL` section into Colab in order.
-7. Run all cells.
+6. Paste the whole file into one Colab cell.
+7. Run it.
 
-Expected time on free T4:
-
-```text
-20-40 minutes
-```
-
-The script fine-tunes:
-
-```text
-Qwen/Qwen2.5-1.5B-Instruct
-```
-
-using LoRA:
-
-```text
-r=16
-lora_alpha=32
-epochs=5
-batch_size=2
-gradient_accumulation_steps=4
-learning_rate=2e-4
-```
-
-The final export should produce:
+The script installs dependencies, trains, runs quick inference tests, merges the adapter, converts to GGUF, quantizes to Q4_K_M, and downloads:
 
 ```text
 qwen25-healthcare-finetuned-q4.gguf
 ```
 
-Download that file from Colab.
+Training settings used:
+
+```text
+Base model: Qwen/Qwen2.5-1.5B-Instruct
+Technique: LoRA supervised fine-tuning
+LoRA rank: 16
+LoRA alpha: 32
+Epochs: 5
+Batch size: 2
+Gradient accumulation: 4
+Learning rate: 2e-4
+Quantized export: Q4_K_M GGUF
+```
+
+The successful Colab run used 529 examples:
+
+```text
+Train: 476
+Eval:  53
+Runtime: about 30 minutes on T4
+Best validation loss: about 0.300 at epoch 2
+```
+
+Later epochs reduced training loss but increased validation loss, so future runs should consider fewer epochs or early stopping.
 
 ## Step 3: Upload GGUF To The VM
 
-From your Windows machine, run this from any PowerShell folder containing the GGUF:
+From Windows PowerShell:
 
 ```powershell
 gcloud compute scp .\qwen25-healthcare-finetuned-q4.gguf `
@@ -149,36 +174,36 @@ gcloud compute scp .\qwen25-healthcare-finetuned-q4.gguf `
   --zone us-central1-a
 ```
 
-If `gcloud compute scp` is unstable, upload through browser SSH or Chrome Remote Desktop instead. The file only needs to end up here:
+If SCP is unstable, upload through Chrome Remote Desktop or Google Drive. The file only needs to exist somewhere on the VM, for example:
 
 ```text
-~/qwen25-healthcare-finetuned-q4.gguf
+~/Downloads/qwen25-healthcare-finetuned-q4.gguf
 ```
 
-## Step 4: Register The Model With Ollama On The VM
+## Step 4: Register The Model With Ollama
 
 On the VM:
 
 ```bash
 cd ~/arsl-translator
 git pull origin main
-bash scripts/assistant_finetune/deploy_to_vm.sh ~/qwen25-healthcare-finetuned-q4.gguf
+bash scripts/assistant_finetune/deploy_to_vm.sh ~/Downloads/qwen25-healthcare-finetuned-q4.gguf
 ```
 
-The script will:
+The deploy script:
 
-1. Start the `ollama` Docker service if needed.
-2. Copy the GGUF into the `arsl_ollama_prod` container.
-3. Create an Ollama model named `qwen25-healthcare`.
-4. Update `.env.production`:
+1. Starts the `ollama` Docker service if needed.
+2. Copies the GGUF into the `arsl_ollama_prod` container.
+3. Creates an Ollama model named `qwen25-healthcare`.
+4. Updates `.env.production`:
 
 ```env
 ASSISTANT_MODEL=qwen25-healthcare
 ```
 
-5. Restart the API service.
+5. Restarts the API container.
 
-## Step 5: Re-Run Evaluation
+## Step 5: Evaluate
 
 ```bash
 cd ~/arsl-translator
@@ -187,7 +212,39 @@ cat finetuned_results.txt
 diff baseline_results.txt finetuned_results.txt || true
 ```
 
-## Step 6: Manual API Tests
+The evaluator intentionally fails on:
+
+- API errors
+- Chinese/CJK output
+- leaked prompt text such as `←`, `الإجابة:`, or instruction fragments
+- obvious role reversal patterns
+
+## Production Guardrail
+
+The backend keeps the fine-tuned model usable by cleaning output before returning it to the Android app:
+
+- stops generation on markers such as `←`, `Input:`, `Answer:`, `الإجابة:`
+- trims leaked instruction text after generation
+- removes helper-voice suggestions
+- falls back to deterministic suggestions when the model output is empty or wrong-script
+
+When the API modifies a model response, the response uses:
+
+```json
+{
+  "source": "ollama_cleaned"
+}
+```
+
+If Ollama fails, the response uses:
+
+```json
+{
+  "source": "fallback"
+}
+```
+
+## Manual API Tests
 
 ```bash
 curl -X POST https://arsl.hadighazi.com/api/ai/assist \
@@ -201,9 +258,9 @@ curl -X POST https://arsl.hadighazi.com/api/ai/assist \
   -d '{"text":"انا في المستشفى واريد اسأل عن موعدي","mode":"suggestions","context":"chat","language":"ar"}'
 ```
 
-## Roll Back
+## Rollback
 
-If the fine-tuned model is worse:
+If the fine-tuned model becomes too slow or worse than the base model:
 
 ```bash
 cd ~/arsl-translator
@@ -223,8 +280,8 @@ finetuned_results.txt
 Suggested table:
 
 ```text
-Model                  Dataset                         Score
-qwen2.5:1.5b           General instruction model       X/8
-qwen25-healthcare      75 deaf-healthcare samples      Y/8
+Model                  Dataset                         Result
+qwen2.5:1.5b           General instruction model       baseline score
+qwen25-healthcare      Deaf-healthcare SFT dataset     fine-tuned score
+qwen25-healthcare      With API cleanup guardrail      production behavior
 ```
-

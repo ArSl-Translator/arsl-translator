@@ -1,270 +1,134 @@
 # ArSL Translator Frontend
 
-Modern React web application for Arabic Sign Language recognition.
+This is the React/Vite web application for the ArSL Translator platform. It provides the browser interface for sign recognition, authentication, prediction history, dashboard views, and the Android Offline Chat download page.
 
 ## Tech Stack
 
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Router** - Client-side routing
-- **Axios** - HTTP client
-- **Lucide React** - Icon library
+- React 18
+- Vite
+- Tailwind CSS
+- React Router
+- Axios
+- Lucide React icons
 
-## Features
+## Main Features
 
-### 🎥 Video Upload
-- Drag & drop or click to upload
-- Video preview before prediction
-- Support for multiple video formats (MP4, AVI, MOV)
-- Real-time prediction results
+| Area | Description |
+|---|---|
+| Video upload | Upload a sign video and send it to the selected backend model |
+| Webcam capture | Capture browser frames and send them as a sequence |
+| Model selection | Uses `/api/health` to enable available engines |
+| Prediction results | Shows top prediction, confidence, label ID, and top-k alternatives |
+| Auth | Register, login, JWT-protected routes |
+| History | Shows previous authenticated predictions |
+| Dashboard | Displays platform usage summaries |
+| Offline chat page | Publishes the signed Android APK and two-phone demo link |
 
-### 📹 Webcam Capture
-- Live webcam feed
-- Configurable frame buffer (30-120 frames)
-- Visual recording indicator
-- Auto-predict when buffer is full
-- Manual prediction trigger
+## Recognition Engines
 
-### 📊 Prediction Results
-- Top prediction highlighted
-- Top-K predictions with confidence scores
-- Visual confidence bars
-- Clean, modern UI
+The frontend supports these backend model keys:
 
-### 🔄 API Status
-- Real-time API health monitoring
-- Model loaded indicator
-- Automatic status checks
-
-## Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Create environment file
-cp .env.example .env
-
-# Start development server
-npm run dev
+```text
+karsl_mediapipe
+arabsign
+karsl
 ```
 
-## Configuration
+Availability comes from:
 
-Create `.env` file:
+```text
+GET /api/health
+```
+
+If a model checkpoint is not mounted on the API container, that engine is shown as unavailable instead of breaking the UI.
+
+## Android APK Download
+
+The Offline Chat page links to:
+
+```text
+/downloads/accessible-chat.apk
+```
+
+Source file in the repo:
+
+```text
+frontend/public/downloads/accessible-chat.apk
+```
+
+Current checked APK matches the latest local release build:
+
+```text
+Release APK: offline-chat-android/app/build/outputs/apk/release/app-release.apk
+SHA-256:     499EE72EEC0AB061B8E4CA06E9DEF3477988C06C5E1E6165D02317EC2A3AE0F5
+Size:        13,124,454 bytes
+```
+
+When a new Android release is built, copy it into the frontend public folder:
+
+```powershell
+Copy-Item `
+  ..\offline-chat-android\app\build\outputs\apk\release\app-release.apk `
+  public\downloads\accessible-chat.apk `
+  -Force
+```
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create `.env`:
 
 ```env
 VITE_API_URL=http://localhost:8000
 ```
 
-## Development
+Run locally:
 
 ```bash
-# Start dev server (with hot reload)
 npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
 ```
 
-## Project Structure
+Run on a VM or remote desktop session:
 
-```
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── VideoUpload.jsx       # Video upload interface
-│   │   ├── WebcamCapture.jsx     # Webcam capture interface
-│   │   └── PredictionResults.jsx # Prediction display
-│   ├── services/
-│   │   └── api.js                # API client
-│   ├── App.jsx                   # Main application
-│   ├── main.jsx                  # Entry point
-│   └── index.css                 # Global styles + Tailwind
-├── index.html                    # HTML template
-├── vite.config.js                # Vite configuration
-├── tailwind.config.js            # Tailwind configuration
-├── postcss.config.js             # PostCSS configuration
-└── package.json                  # Dependencies
-```
-
-## Components
-
-### VideoUpload
-
-Handles video file uploads and predictions.
-
-**Features:**
-- File input with drag & drop
-- Video preview
-- Upload progress
-- Error handling
-- Results display
-
-### WebcamCapture
-
-Handles real-time webcam capture and prediction.
-
-**Features:**
-- Webcam initialization
-- Frame capture at 30fps
-- Configurable buffer size
-- Recording indicator
-- Auto-prediction
-- Manual stop & predict
-
-### PredictionResults
-
-Displays prediction results in a beautiful format.
-
-**Features:**
-- Top prediction highlighted
-- Top-K predictions list
-- Confidence percentages
-- Visual progress bars
-- Loading states
-
-## API Integration
-
-The app communicates with the FastAPI backend through `src/services/api.js`.
-
-### API Client
-
-```javascript
-import { predictVideo, predictFrames, healthCheck } from './services/api';
-
-// Upload video
-const result = await predictVideo(file, topK);
-
-// Send webcam frames
-const result = await predictFrames(base64Frames, topK);
-
-// Check API health
-const health = await healthCheck();
-```
-
-## Styling
-
-The app uses **Tailwind CSS** for styling with a custom color scheme:
-
-### Primary Colors
-- `primary-50` to `primary-900` - Purple gradient
-
-### Custom Components
-- `.btn-primary` - Primary button style
-- `.btn-secondary` - Secondary button style
-- `.btn-danger` - Danger button style
-- `.card` - Card container style
-- `.input` - Input field style
-
-## Browser Support
-
-- Chrome/Edge (recommended)
-- Firefox
-- Safari 14+
-
-**Note:** Webcam features require HTTPS or localhost.
-
-## Troubleshooting
-
-### API Connection Failed
-
-**Problem:** "Failed to fetch" error
-
-**Solutions:**
-1. Check API is running: `curl http://localhost:8000/health`
-2. Verify VITE_API_URL in `.env`
-3. Check CORS settings in backend
-
-### Webcam Not Working
-
-**Problem:** Webcam won't start
-
-**Solutions:**
-1. Grant camera permissions in browser
-2. Use Chrome (best support)
-3. Ensure HTTPS or localhost
-4. Check if camera is used by another app
-
-### Build Errors
-
-**Problem:** Build fails with dependency errors
-
-**Solutions:**
 ```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Use correct Node version
-nvm use 18
+VITE_API_URL=http://localhost:8000 npm run dev -- --host 0.0.0.0 --port 3000
 ```
 
-## Production Deployment
-
-### Build
+Build:
 
 ```bash
 npm run build
 ```
 
-Output will be in `dist/` directory.
-
-### Serve
+Preview:
 
 ```bash
-# Preview locally
 npm run preview
-
-# Or use any static server
-npx serve -s dist
-
-# Or deploy to:
-# - Vercel
-# - Netlify
-# - GitHub Pages
-# - Any static hosting
 ```
 
-### Environment Variables
+## Production
 
-For production, set:
+Production uses Docker. The frontend image builds the Vite app and serves the static files through Nginx. Caddy routes public traffic:
+
+```text
+https://arsl.hadighazi.com/       -> frontend
+https://arsl.hadighazi.com/api/*  -> FastAPI backend
+https://arsl.hadighazi.com/mlflow -> MLflow
+```
+
+Production API base URL is passed at build/runtime through:
+
 ```env
-VITE_API_URL=https://your-api-domain.com
+VITE_API_URL=/api
 ```
 
-## Performance
+## Browser Notes
 
-### Optimizations
-
-- Lazy loading of components
-- Image optimization
-- Code splitting
-- Tree shaking
-- Minification
-- Gzip compression
-
-### Bundle Size
-
-- React + React DOM: ~130 KB
-- Router + Axios: ~40 KB
-- Tailwind CSS: ~5 KB (purged)
-- Total: ~180 KB gzipped
-
-## Contributing
-
-1. Create feature branch
-2. Make changes
-3. Test thoroughly
-4. Submit pull request
-
-## License
-
-MIT License - see LICENSE file for details
+- Webcam access requires HTTPS or localhost.
+- Chrome/Edge generally provide the best camera support.
+- VM remote desktop sessions often do not expose the local laptop webcam; use video upload or open the production site directly from the laptop.

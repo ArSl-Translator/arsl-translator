@@ -1,38 +1,70 @@
 # Accessible Chat Android App
 
-Accessible Chat is the Android companion application for the ArSL Translator platform. It is designed for nearby communication when internet access is unavailable, especially for people who need text-based communication with someone beside them.
+Accessible Chat is the Android companion application for the ArSL Translator platform. It is built for nearby, face-to-face communication when internet access is unavailable, while also offering optional online AI writing support when the deployed ArSL API is reachable.
 
 ## What It Does
 
-- Discovers nearby Android devices over Bluetooth.
-- Uses explicit Bluetooth server and client roles.
-- Exchanges chat messages through RFCOMM socket programming.
-- Runs background listening and transfer threads so the Compose UI stays responsive.
+- Discovers nearby Android devices over Bluetooth Classic.
+- Lets one phone host a chat and another phone connect as the helper device.
+- Exchanges text messages through RFCOMM socket streams.
+- Transfers images, video, audio, and files with a framed binary protocol.
+- Runs blocking socket reads on background threads so the Compose UI remains responsive.
 - Stores conversations and messages locally with Room.
-- Supports media-oriented chat flows including images, video, audio, and files.
-- Includes Assistive Message Studio for optional chat-integrated clarification, simplification, and context-aware suggested replies.
-- Includes Arabic and English resources with RTL support.
+- Includes Assistive Message Studio for optional message clarification, simplification, and context suggestions.
+- Supports Arabic and English usage, including RTL text rendering.
 
-The core Bluetooth chat works without internet access. Assistive Message Studio is optional: it requires network access to the deployed ArSL API, where a local open-source Ollama model runs on the VM. If the AI service is unavailable, Bluetooth chat is unaffected.
+The core Bluetooth chat is fully offline. Assistive Message Studio is optional and online: the app calls the deployed ArSL API, and the API calls a local open-source Ollama model running on the VM. If the AI service is unavailable, Bluetooth messaging still works.
 
 ## Project Structure
 
 ```text
 offline-chat-android/
-├── app/
-│   ├── src/main/java/com/healthcare/offlinechat/
-│   │   ├── bluetooth/      # Bluetooth discovery, server/client sockets, framed transfer
-│   │   ├── data/           # Room entities, DAOs, and database
-│   │   ├── media/          # File handling and audio recording helpers
-│   │   ├── ui/             # Jetpack Compose screens, components, and theme
-│   │   ├── viewmodel/      # Chat state and connection orchestration
-│   │   └── MainActivity.kt
-│   └── build.gradle.kts
-├── gradle/
-├── gradlew
-├── gradlew.bat
-└── settings.gradle.kts
+  app/
+    src/main/java/com/healthcare/offlinechat/
+      ai/             API client for Assistive Message Studio
+      bluetooth/      Bluetooth discovery, server/client sockets, framed transfer
+      data/           Room entities, DAOs, and database
+      media/          File handling, media metadata, and audio recording helpers
+      ui/             Jetpack Compose screens, components, and theme
+      viewmodel/      Chat state and connection orchestration
+      MainActivity.kt
+    build.gradle.kts
+  gradle/
+  gradlew
+  gradlew.bat
+  settings.gradle.kts
 ```
+
+## Assistive Message Studio
+
+The chat screen integrates three AI actions:
+
+| Action | Used by | API mode |
+|---|---|---|
+| Make clearer | Helper reading a rough message from the assisted user | `deaf_to_hearing` |
+| Simplify | Assisted user reading a longer message from the helper | `hearing_to_deaf` |
+| Sparkle composer suggestions | Either user preparing a new message | `suggestions` |
+
+Client file:
+
+```text
+app/src/main/java/com/healthcare/offlinechat/ai/AiAssistantClient.kt
+```
+
+Default production API:
+
+```text
+https://arsl.hadighazi.com/api/ai/assist
+```
+
+The deployed backend currently supports both the base Ollama model and the fine-tuned healthcare communication model:
+
+```text
+qwen2.5:1.5b
+qwen25-healthcare
+```
+
+The backend also applies a cleanup guardrail for the fine-tuned model so leaked prompt text such as examples, arrows, or instruction fragments is not returned to the app.
 
 ## Build In Android Studio
 
@@ -52,26 +84,64 @@ Bluetooth chat should be tested with two physical Android devices. Emulators are
 
 ## Build APK From Terminal
 
-From this folder:
-
-```bash
-./gradlew assembleDebug
-```
-
-On Windows PowerShell:
+Debug build:
 
 ```powershell
+cd offline-chat-android
 .\gradlew.bat assembleDebug
 ```
 
-The debug APK is generated at:
+Release build:
 
-```text
-app/build/outputs/apk/debug/app-debug.apk
+```powershell
+cd offline-chat-android
+.\gradlew.bat :app:assembleRelease --no-daemon --console=plain
 ```
 
-## Notes
+The release APK is generated at:
 
-- The app package is `com.healthcare.offlinechat`.
-- `local.properties`, `.gradle`, `.idea`, `.kotlin`, and `build/` outputs are intentionally not committed.
+```text
+offline-chat-android/app/build/outputs/apk/release/app-release.apk
+```
+
+The website-download APK is:
+
+```text
+frontend/public/downloads/accessible-chat.apk
+```
+
+When publishing a new Android build, copy the release APK to the frontend download path:
+
+```powershell
+Copy-Item `
+  offline-chat-android\app\build\outputs\apk\release\app-release.apk `
+  frontend\public\downloads\accessible-chat.apk `
+  -Force
+```
+
+Current checked website APK matches the latest local release build:
+
+```text
+SHA-256: 499EE72EEC0AB061B8E4CA06E9DEF3477988C06C5E1E6165D02317EC2A3AE0F5
+Size:    13,124,454 bytes
+```
+
+## Installation Notes
+
+- The package name is `com.healthcare.offlinechat`.
+- If Android says the package conflicts with an existing package, uninstall the USB-debug build first.
 - Android 12+ requires runtime Bluetooth permissions before scanning or connecting.
+- Some phones require pairing in Android system settings before the app can connect.
+- Install the same signed APK on both phones for normal testing.
+
+## Files Not To Commit
+
+The following are intentionally ignored:
+
+- `local.properties`
+- `.gradle/`
+- `.idea/`
+- `.kotlin/`
+- `build/`
+- keystore files
+- `keystore.properties`

@@ -38,8 +38,8 @@ The final system is not just a notebook or one trained model. It is a deployable
 | ArabSign model | Working when `models/arabsign_best_model.pt` exists |
 | Raw-frame KArSL baseline | Implemented as an experimental baseline, not currently served unless a checkpoint is provided |
 | MLflow | Available locally and in production deployment |
-| Assistive Message Studio | Optional chat-integrated AI writing assistant for clarification, simplification, and context suggestions |
-| Android offline chat APK | Buildable and downloadable from the website |
+| Assistive Message Studio | Chat-integrated AI writing assistant backed by Ollama; supports the base Qwen model and the fine-tuned `qwen25-healthcare` model |
+| Android offline chat APK | Buildable, signed, and downloadable from the website |
 | Production deployment | Dockerized for a GCP VM and domain deployment |
 
 ## High-Level Architecture
@@ -195,8 +195,9 @@ Runtime flow:
 Android app
   -> POST /api/ai/assist
   -> FastAPI prompt builder
-  -> Ollama local model, default qwen2.5:1.5b
-  -> generated communication text
+  -> Ollama local model, qwen25-healthcare or qwen2.5:1.5b
+  -> output cleanup guardrail
+  -> generated communication text or deterministic fallback
   -> inline message explanation or composer draft
 ```
 
@@ -224,12 +225,70 @@ Response:
   "mode": "hearing_to_deaf",
   "context": "clinic",
   "output": "I did not understand the doctor. Please explain in a simpler way.",
-  "model": "qwen2.5:1.5b",
-  "source": "ollama"
+  "model": "qwen25-healthcare",
+  "source": "ollama_cleaned"
 }
 ```
 
+Response `source` values:
+
+| Source | Meaning |
+|---|---|
+| `ollama` | Raw Ollama response was usable as-is |
+| `ollama_cleaned` | Ollama response was used after removing leaked prompt/example text |
+| `fallback` | Ollama failed, produced wrong-script text, or produced an empty/unsafe answer |
+
 If Ollama is unavailable, the endpoint returns a safe fallback response instead of breaking the app. This keeps the mobile experience usable even before the VM model is downloaded.
+
+### Fine-Tuned LLM
+
+The current fine-tuned assistant model is:
+
+```text
+qwen25-healthcare
+```
+
+It was produced from:
+
+```text
+Qwen/Qwen2.5-1.5B-Instruct
+```
+
+using LoRA supervised fine-tuning in Google Colab. The training data is stored in:
+
+```text
+scripts/assistant_finetune/dataset.jsonl
+```
+
+The one-cell Colab workflow is:
+
+```text
+scripts/assistant_finetune/colab_finetune.py
+```
+
+Observed fine-tune setup:
+
+| Setting | Value |
+|---|---|
+| Base model | `Qwen/Qwen2.5-1.5B-Instruct` |
+| Training method | LoRA SFT |
+| LoRA rank | `16` |
+| LoRA alpha | `32` |
+| Epochs | `5` |
+| Training examples | `476` |
+| Eval examples | `53` |
+| Export format | GGUF |
+| Quantization | `Q4_K_M` |
+| Ollama model name | `qwen25-healthcare` |
+
+Observed Colab result:
+
+```text
+Best validation loss: about 0.300 at epoch 2
+Final validation loss: about 0.357 at epoch 5
+```
+
+The later validation loss increase indicates some overfitting, so the production API includes a deterministic cleanup guardrail. This guardrail removes leaked fine-tune prompt artifacts such as arrows, example labels, and instruction fragments before returning text to the mobile app.
 
 ## FastAPI Backend
 
@@ -799,6 +858,15 @@ APK download path in the website:
 frontend/public/downloads/accessible-chat.apk
 ```
 
+The current website APK matches the latest local release build:
+
+```text
+Release APK: offline-chat-android/app/build/outputs/apk/release/app-release.apk
+Website APK: frontend/public/downloads/accessible-chat.apk
+SHA-256:     499EE72EEC0AB061B8E4CA06E9DEF3477988C06C5E1E6165D02317EC2A3AE0F5
+Size:        13,124,454 bytes
+```
+
 Demo link on the website:
 
 ```text
@@ -1008,7 +1076,7 @@ HAND_LANDMARKER_MODEL_PATH=/app/mediapipe_models/hand_landmarker.task
 KARSL_MEDIAPIPE_MIRROR_INPUT=true
 MLFLOW_TRACKING_URI=http://mlflow:5000
 OLLAMA_URL=http://ollama:11434
-ASSISTANT_MODEL=qwen2.5:1.5b
+ASSISTANT_MODEL=qwen25-healthcare
 ```
 
 ## Production Deployment
@@ -1105,13 +1173,40 @@ The deploy script:
 
 ### Install The Local Assistant Model
 
-The Ollama container starts empty. Pull the small open-source assistant model once on the VM:
+The Ollama container starts empty. There are two supported assistant options.
+
+Option A: install the fine-tuned healthcare communication model:
+
+```bash
+cd ~/arsl-translator
+bash scripts/assistant_finetune/deploy_to_vm.sh ~/Downloads/qwen25-healthcare-finetuned-q4.gguf
+```
+
+This creates the Ollama model:
+
+```text
+qwen25-healthcare
+```
+
+and updates `.env.production`:
+
+```text
+ASSISTANT_MODEL=qwen25-healthcare
+```
+
+Option B: pull the base open-source model:
 
 ```bash
 cd ~/arsl-translator
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d ollama
 docker compose -f docker-compose.prod.yml --env-file .env.production exec ollama \
   ollama pull qwen2.5:1.5b
+```
+
+Then set:
+
+```text
+ASSISTANT_MODEL=qwen2.5:1.5b
 ```
 
 If the VM feels too slow, switch to the smaller model:

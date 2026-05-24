@@ -59,7 +59,7 @@ POSTGRES_DB=arsl_db
 JWT_SECRET_KEY=<output-of-openssl-rand-hex-32>
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 KARSL_MEDIAPIPE_MIRROR_INPUT=true
-ASSISTANT_MODEL=qwen2.5:1.5b
+ASSISTANT_MODEL=qwen25-healthcare
 ```
 
 Generate strong values on the VM:
@@ -122,13 +122,48 @@ You should see a `serving_models` experiment with runs for the current KArSL Med
 
 ## 6. Assistive Message Studio
 
-The production stack includes Ollama for the optional AI writing assistant used by the Android app. Pull the model once after deployment:
+The production stack includes Ollama for the optional AI writing assistant used by the Android app.
+
+### Fine-Tuned Model
+
+The current fine-tuned assistant is registered in Ollama as:
+
+```text
+qwen25-healthcare
+```
+
+It is a Q4_K_M GGUF export of a LoRA fine-tune of `Qwen/Qwen2.5-1.5B-Instruct`, trained for healthcare communication, deaf-to-hearing rewriting, hearing-to-deaf simplification, and ready-to-send chat suggestions.
+
+After downloading or copying the GGUF to the VM, register it:
+
+```bash
+cd ~/arsl-translator
+bash scripts/assistant_finetune/deploy_to_vm.sh ~/Downloads/qwen25-healthcare-finetuned-q4.gguf
+```
+
+The script copies the GGUF into the `arsl_ollama_prod` container, runs `ollama create qwen25-healthcare`, updates `.env.production`, and restarts the API.
+
+The API also applies an output cleanup guardrail. If the fine-tuned model leaks prompt text or example annotations, FastAPI trims that text before returning it to the Android app and reports:
+
+```json
+{"source": "ollama_cleaned"}
+```
+
+### Base Model Fallback
+
+If you do not want the fine-tuned model, pull the base model once after deployment:
 
 ```bash
 cd ~/arsl-translator
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d ollama
 docker compose -f docker-compose.prod.yml --env-file .env.production exec ollama \
   ollama pull qwen2.5:1.5b
+```
+
+Then set:
+
+```text
+ASSISTANT_MODEL=qwen2.5:1.5b
 ```
 
 Test the API endpoint:
