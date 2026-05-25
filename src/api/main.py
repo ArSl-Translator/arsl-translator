@@ -67,6 +67,7 @@ app.mount("/audio", StaticFiles(directory=_audio_dir), name="audio")
 
 model_registry: Dict[str, object] = {}
 model_paths: Dict[str, Optional[str]] = {}
+model_load_errors: Dict[str, str] = {}
 
 
 def resolve_karsl_model_path() -> Optional[str]:
@@ -191,7 +192,8 @@ def get_model_or_503(model: Optional[str]):
 
 @app.on_event("startup")
 def startup():
-    global model_paths
+    global model_paths, model_load_errors
+    model_load_errors = {}
 
     try:
         create_tables()
@@ -219,6 +221,7 @@ def startup():
             model_registry["karsl"] = ModelInference(model_path=karsl_model_path)
             print(f"KArSL model loaded from {karsl_model_path}")
         except Exception as exc:
+            model_load_errors["karsl"] = str(exc)
             print(f"Error loading KArSL model: {exc}")
     else:
         print("Warning: KArSL checkpoint missing. Train it or set MODEL_PATH.")
@@ -228,6 +231,7 @@ def startup():
             model_registry["karsl_mediapipe"] = KArSLMediaPipeInference(model_path=karsl_mediapipe_model_path)
             print(f"KArSL MediaPipe model loaded from {karsl_mediapipe_model_path}")
         except Exception as exc:
+            model_load_errors["karsl_mediapipe"] = str(exc)
             print(f"Error loading KArSL MediaPipe model: {exc}")
     else:
         print("Warning: KArSL MediaPipe checkpoint missing.")
@@ -237,6 +241,7 @@ def startup():
             model_registry["arabsign"] = ArabSignInference(model_path=arabsign_model_path)
             print(f"ArabSign model loaded from {arabsign_model_path}")
         except Exception as exc:
+            model_load_errors["arabsign"] = str(exc)
             print(f"Error loading ArabSign model: {exc}")
     else:
         print("Warning: ArabSign checkpoint missing.")
@@ -246,6 +251,7 @@ def startup():
             model_registry["arsl_rag"] = ArabicAlphabetRAGInference(index_dir=rag_sign_index_path)
             print(f"Arabic alphabet RAG model loaded from {rag_sign_index_path}")
         except Exception as exc:
+            model_load_errors["arsl_rag"] = str(exc)
             print(f"Error loading Arabic alphabet RAG model: {exc}")
     else:
         print("Warning: Arabic alphabet RAG index missing.")
@@ -254,7 +260,11 @@ def startup():
 @app.get("/health")
 def health():
     models = {
-        name: {"loaded": name in model_registry, "path": path}
+        name: {
+            "loaded": name in model_registry,
+            "path": path,
+            "error": model_load_errors.get(name),
+        }
         for name, path in model_paths.items()
     }
     return {
