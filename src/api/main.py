@@ -25,6 +25,7 @@ from src.api.karsl_mediapipe_inference import (
     KArSLMediaPipeInference,
 )
 from src.api.models.user import User
+from src.api.rag_sign_inference import ArabicAlphabetRAGInference, resolve_chroma_index_dir
 from src.utils.generate_audio import generate_all_audio
 
 app = FastAPI(title="ArSL Translator API", version="0.3.0")
@@ -115,6 +116,31 @@ def resolve_karsl_mediapipe_model_path() -> Optional[str]:
     return _first_existing(candidates)
 
 
+def resolve_rag_sign_index_path() -> Optional[str]:
+    candidates: List[str] = []
+    env_path = os.environ.get("RAG_SIGN_INDEX_DIR")
+    if env_path:
+        candidates.append(env_path)
+    candidates.extend(
+        [
+            "./models/rag_sign_index",
+            "./models/sign_index",
+            "./artifacts/rag_sign_index",
+            "./artifacts/sign_index",
+        ]
+    )
+    seen: Set[str] = set()
+    for path in candidates:
+        key = os.path.normpath(os.path.abspath(path))
+        if key in seen:
+            continue
+        seen.add(key)
+        resolved = resolve_chroma_index_dir(path)
+        if resolved:
+            return resolved
+    return None
+
+
 def _first_existing(candidates: List[str]) -> Optional[str]:
     seen: Set[str] = set()
     for path in candidates:
@@ -139,9 +165,15 @@ def normalize_model_name(model: Optional[str]) -> str:
         "pose": "karsl_mediapipe",
         "arab-sign": "arabsign",
         "arab_sign": "arabsign",
+        "rag": "arsl_rag",
+        "sign_rag": "arsl_rag",
+        "arabic-rag": "arsl_rag",
+        "arabic_rag": "arsl_rag",
+        "arabic_alphabet": "arsl_rag",
+        "arabic_alphabet_rag": "arsl_rag",
     }
     selected = aliases.get(selected, selected)
-    if selected not in {"karsl", "karsl_mediapipe", "arabsign"}:
+    if selected not in {"karsl", "karsl_mediapipe", "arabsign", "arsl_rag"}:
         raise HTTPException(status_code=400, detail=f"Unknown model '{model}'")
     return selected
 
@@ -174,10 +206,12 @@ def startup():
     karsl_model_path = resolve_karsl_model_path()
     karsl_mediapipe_model_path = resolve_karsl_mediapipe_model_path()
     arabsign_model_path = resolve_arabsign_model_path()
+    rag_sign_index_path = resolve_rag_sign_index_path()
     model_paths = {
         "karsl": karsl_model_path,
         "karsl_mediapipe": karsl_mediapipe_model_path,
         "arabsign": arabsign_model_path,
+        "arsl_rag": rag_sign_index_path,
     }
 
     if karsl_model_path:
@@ -206,6 +240,15 @@ def startup():
             print(f"Error loading ArabSign model: {exc}")
     else:
         print("Warning: ArabSign checkpoint missing.")
+
+    if rag_sign_index_path:
+        try:
+            model_registry["arsl_rag"] = ArabicAlphabetRAGInference(index_dir=rag_sign_index_path)
+            print(f"Arabic alphabet RAG model loaded from {rag_sign_index_path}")
+        except Exception as exc:
+            print(f"Error loading Arabic alphabet RAG model: {exc}")
+    else:
+        print("Warning: Arabic alphabet RAG index missing.")
 
 
 @app.get("/health")

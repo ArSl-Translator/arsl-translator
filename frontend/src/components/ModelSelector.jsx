@@ -9,6 +9,11 @@ export const MODEL_OPTIONS = [
     description: 'Best for single Arabic signs with the trained 502-class landmark model.',
   },
   {
+    value: 'arsl_rag',
+    title: 'Arabic Alphabet RAG',
+    description: 'Retrieval-based Arabic alphabet signs using the CLIP + Chroma index.',
+  },
+  {
     value: 'arabsign',
     title: 'ArabSign phrase translation',
     description: 'Best for continuous Arabic sign phrases using the ArabSign sequence model.',
@@ -20,7 +25,7 @@ export const MODEL_OPTIONS = [
   },
 ];
 
-const preferredOrder = ['karsl_mediapipe', 'arabsign', 'karsl'];
+const preferredOrder = ['karsl_mediapipe', 'arsl_rag', 'arabsign', 'karsl'];
 
 const ModelSelector = ({ value, onChange, disabled = false }) => {
   const [health, setHealth] = useState(null);

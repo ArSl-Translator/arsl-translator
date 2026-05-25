@@ -22,6 +22,9 @@ data/
 artifacts/
 outputs/
 models/*.pt
+models/*.zip
+models/rag_sign_index/
+models/sign_index/
 
 # ---- Logs ----
 *.log

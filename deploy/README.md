@@ -9,6 +9,7 @@ This deployment runs the full ArSL platform on one VM:
 - MLflow serves experiment and model tracking at `/mlflow`.
 - Ollama runs a small local open-source language model for Assistive Message Studio.
 - Model checkpoints stay on the VM under `models/` and are mounted into the API container.
+- The notebook RAG sign index stays on the VM under `models/rag_sign_index/` and is mounted into the API container.
 
 ## 1. DNS
 
@@ -75,11 +76,24 @@ Make sure these files exist on the VM:
 ```text
 ~/arsl-translator/models/karsl_mediapipe_bilstm_best.pt
 ~/arsl-translator/models/arabsign_best_model.pt
+~/arsl-translator/models/rag_sign_index/chroma.sqlite3
 ~/arsl-translator/outputs/index/label2text.json
 ~/arsl-translator/outputs/index/text2label.json
 ```
 
 The raw-frame KArSL model is optional. If it is missing, `/health` will show `karsl.loaded=false`, which is fine when using `karsl_mediapipe`.
+
+The Arabic Alphabet RAG model is also optional. If `sign_index.zip` is on the VM, install it like this:
+
+```bash
+cd ~/arsl-translator
+rm -rf models/rag_sign_index
+mkdir -p models/rag_sign_index
+unzip -o ~/Downloads/sign_index.zip -d models/rag_sign_index
+find models/rag_sign_index -name chroma.sqlite3 -print
+```
+
+The API searches recursively under `models/rag_sign_index`, so it is okay if the zip expands into a nested `sign_index/` folder.
 
 ## 4. Manual Production Deploy
 
@@ -94,6 +108,18 @@ Open:
 https://arsl.hadighazi.com
 https://arsl.hadighazi.com/api/health
 https://arsl.hadighazi.com/mlflow
+```
+
+Check that the RAG model is visible:
+
+```bash
+curl https://arsl.hadighazi.com/api/health
+```
+
+Look for:
+
+```json
+"arsl_rag": {"loaded": true}
 ```
 
 ## 5. MLflow Tracking

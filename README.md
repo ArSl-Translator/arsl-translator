@@ -35,6 +35,7 @@ The final system is not just a notebook or one trained model. It is a deployable
 | FastAPI backend | Working |
 | Authentication and prediction history | Working |
 | KArSL MediaPipe model | Working when `models/karsl_mediapipe_bilstm_best.pt` exists |
+| Arabic Alphabet RAG model | Working when `models/rag_sign_index/` contains the Chroma index from `sign_index.zip` |
 | ArabSign model | Working when `models/arabsign_best_model.pt` exists |
 | Raw-frame KArSL baseline | Implemented as an experimental baseline, not currently served unless a checkpoint is provided |
 | MLflow | Available locally and in production deployment |
@@ -68,6 +69,7 @@ FastAPI Backend
   |
   +-- model registry
   |     +-- karsl_mediapipe
+  |     +-- arsl_rag
   |     +-- arabsign
   |     +-- karsl raw-frame baseline, optional
   |
@@ -147,6 +149,7 @@ The frontend uses `/health` to discover which recognition engines are actually l
 | Engine key | User-facing meaning | Status behavior |
 |---|---|---|
 | `karsl_mediapipe` | KArSL isolated-sign recognition | Ready when `models/karsl_mediapipe_bilstm_best.pt` is mounted |
+| `arsl_rag` | Arabic alphabet RAG recognition | Ready when `models/rag_sign_index/` contains a Chroma index named `arabic_sign_language` |
 | `arabsign` | ArabSign phrase translation | Ready when `models/arabsign_best_model.pt` is mounted |
 | `karsl` | Raw-frame image-sequence KArSL recognition | Disabled unless a raw-frame checkpoint exists |
 
@@ -352,6 +355,10 @@ Example response:
     "arabsign": {
       "loaded": true,
       "path": "/app/models/arabsign_best_model.pt"
+    },
+    "arsl_rag": {
+      "loaded": true,
+      "path": "/app/models/rag_sign_index"
     }
   },
   "mediapipe_pose_model_available": true,
@@ -559,7 +566,58 @@ KARSL_MEDIAPIPE_SWAP_HANDS=false
 
 `KARSL_MEDIAPIPE_MIRROR_INPUT=true` was kept because webcam/front-camera recordings are often horizontally flipped compared with the dataset orientation. In testing, manually mirrored input improved confidence for the sample video, so mirroring became the default runtime behavior.
 
-## Model 2: ArabSign GRU Attention Translator
+## Model 2: Arabic Alphabet RAG Retrieval
+
+This is the notebook-based Arabic alphabet recognition path from `sign_trans_arabic3`.
+
+### Purpose
+
+Recognize static Arabic alphabet hand signs by retrieving the nearest visual examples from a Chroma vector index. This route is useful because the model artifact is the already-built `sign_index.zip`; no extra training is required on the VM.
+
+### Runtime Flow
+
+```text
+Browser webcam frame or uploaded video
+  -> sample frames
+  -> MediaPipe Hand Landmarker crop
+  -> YOLOv8 fallback crop
+  -> center crop fallback
+  -> resize to 224 x 224
+  -> SentenceTransformer CLIP image embedding, clip-ViT-L-14
+  -> Chroma collection arabic_sign_language
+  -> nearest-neighbor voting across frames
+  -> Arabic letter output
+```
+
+The API model key is:
+
+```text
+arsl_rag
+```
+
+Expected VM artifact:
+
+```text
+~/arsl-translator/models/rag_sign_index/
+  chroma.sqlite3
+  ...
+```
+
+If the zip contains a nested `sign_index/` folder, the API searches recursively for `chroma.sqlite3` and uses the correct inner directory automatically.
+
+Important environment variables:
+
+```text
+RAG_SIGN_INDEX_DIR=/app/models/rag_sign_index
+RAG_SIGN_COLLECTION=arabic_sign_language
+RAG_SIGN_CLIP_MODEL=clip-ViT-L-14
+RAG_SIGN_FRAMES=10
+RAG_SIGN_USE_REMBG=false
+```
+
+`RAG_SIGN_USE_REMBG` is off by default because the index was built from cropped images without guaranteed background removal. It can be turned on later if webcam lighting/background testing shows better retrieval.
+
+## Model 3: ArabSign GRU Attention Translator
 
 This model is the migrated ArabSign sentence/phrase translation path.
 
@@ -669,7 +727,7 @@ The migrated ArabSign notes reported:
 
 These numbers are from the migrated ArabSign training notes. For a final academic report, re-running evaluation from the exact checkpoint and dataset is recommended if the professor requires fully reproducible metrics.
 
-## Model 3: Raw-Frame KArSL ResNet18 + BiLSTM Baseline
+## Model 4: Raw-Frame KArSL ResNet18 + BiLSTM Baseline
 
 This model path is implemented but not currently the main production model.
 
@@ -771,6 +829,7 @@ KArSL MediaPipe is the selected production KArSL route because it is lighter, fa
 | Model | Problem type | Input | Algorithm | Current role |
 |---|---|---|---|---|
 | KArSL MediaPipe BiLSTM | 502-class isolated sign classification | 108 landmark coordinates per frame | LayerNorm + BiLSTM + MLP classifier | Main KArSL production model |
+| Arabic Alphabet RAG | Arabic alphabet static-sign retrieval | Cropped RGB hand image | CLIP image embedding + Chroma nearest-neighbor voting | Notebook-compatible RAG route |
 | ArabSign GRU Attention | Arabic phrase generation | 75 pose features per frame | BiGRU encoder + attention GRU decoder | Phrase translation model |
 | Raw-frame KArSL ResNet18 + BiLSTM | 502-class isolated sign classification | RGB frame sequence | ResNet18 frame encoder + BiLSTM | Experimental baseline |
 
@@ -1053,6 +1112,7 @@ models/
   karsl_mediapipe_bilstm_best.pt
   arabsign_best_model.pt
   baseline_resnet18_bilstm_last.pt       optional
+  rag_sign_index/                         optional Chroma index from sign_index.zip
 ```
 
 Generated label maps:
@@ -1071,6 +1131,9 @@ JWT_SECRET_KEY=change-me-in-production
 MODEL_PATH=/app/models/baseline_resnet18_bilstm_last.pt
 KARSL_MEDIAPIPE_MODEL_PATH=/app/models/karsl_mediapipe_bilstm_best.pt
 ARABSIGN_MODEL_PATH=/app/models/arabsign_best_model.pt
+RAG_SIGN_INDEX_DIR=/app/models/rag_sign_index
+RAG_SIGN_COLLECTION=arabic_sign_language
+RAG_SIGN_CLIP_MODEL=clip-ViT-L-14
 MEDIAPIPE_MODEL_PATH=/app/mediapipe_models/pose_landmarker_full.task
 HAND_LANDMARKER_MODEL_PATH=/app/mediapipe_models/hand_landmarker.task
 KARSL_MEDIAPIPE_MIRROR_INPUT=true
@@ -1322,11 +1385,12 @@ A strong presentation flow:
 3. Open `/api/health` to show loaded engines.
 4. Upload a video with KArSL MediaPipe selected.
 5. Switch to ArabSign if the checkpoint is installed.
-6. Open MLflow at `/mlflow` and show `serving_models`.
-7. Explain the raw-frame KArSL baseline as an experimental branch.
-8. Open the Offline Chat page.
-9. Show the APK download and two-phone demo link.
-10. Run the Android app on two phones and explain Bluetooth server/client roles, socket streams, background threads, and binary transfer.
+6. Switch to Arabic Alphabet RAG if `sign_index.zip` is installed.
+7. Open MLflow at `/mlflow` and show `serving_models`.
+8. Explain the raw-frame KArSL baseline as an experimental branch.
+9. Open the Offline Chat page.
+10. Show the APK download and two-phone demo link.
+11. Run the Android app on two phones and explain Bluetooth server/client roles, socket streams, background threads, and binary transfer.
 
 ## Troubleshooting
 
@@ -1349,6 +1413,31 @@ Then redeploy:
 ```bash
 cd ~/arsl-translator
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+### `arsl_rag.loaded=false`
+
+The Chroma index is missing or nested somewhere unexpected. On the VM:
+
+```bash
+cd ~/arsl-translator
+rm -rf models/rag_sign_index
+mkdir -p models/rag_sign_index
+unzip -o ~/Downloads/sign_index.zip -d models/rag_sign_index
+find models/rag_sign_index -name chroma.sqlite3 -print
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build api frontend
+```
+
+Then check:
+
+```bash
+curl https://arsl.hadighazi.com/api/health
+```
+
+The response should include:
+
+```json
+"arsl_rag": {"loaded": true}
 ```
 
 ### `karsl_mediapipe.loaded=false`

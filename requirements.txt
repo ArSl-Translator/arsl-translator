@@ -6,6 +6,12 @@ fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 python-multipart>=0.0.6
 requests>=2.31.0
+chromadb==0.5.23
+sentence-transformers==3.0.1
+transformers==4.44.2
+ultralytics==8.3.40
+rembg==2.0.59
+onnxruntime==1.19.2
 
 # Auth & Database
 sqlalchemy>=2.0.25

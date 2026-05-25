@@ -30,6 +30,7 @@ The frontend supports these backend model keys:
 
 ```text
 karsl_mediapipe
+arsl_rag
 arabsign
 karsl
 ```
@@ -41,6 +42,12 @@ GET /api/health
 ```
 
 If a model checkpoint is not mounted on the API container, that engine is shown as unavailable instead of breaking the UI.
+
+`arsl_rag` is the Arabic Alphabet RAG route. It becomes selectable when the backend finds the Chroma index from `sign_index.zip` under:
+
+```text
+models/rag_sign_index/
+```
 
 ## Android APK Download
 
