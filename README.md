@@ -700,6 +700,7 @@ Important environment variables:
 RAG_SIGN_INDEX_DIR=/app/models/rag_sign_index
 RAG_SIGN_COLLECTION=arabic_sign_language
 RAG_SIGN_CLIP_MODEL=clip-ViT-L-14
+RAG_SIGN_EMBED_DIM=768
 RAG_SIGN_FRAMES=10
 RAG_SIGN_USE_YOLO=false
 RAG_SIGN_USE_REMBG=false
@@ -719,6 +720,7 @@ Compatibility fixes included in the production API:
 | `no such column: collections.topic` | Pin Chroma to the version compatible with the existing index |
 | `object of type 'int' has no len()` in Chroma seq IDs | Patch Chroma seq-id decoding in `rag_sign_inference.py` for the notebook-generated index |
 | `'dict' object has no attribute 'dimensionality'` | Convert older Chroma HNSW metadata dictionaries into Chroma 0.5 persistent metadata objects at load time |
+| `hnswlib.Index(... dim=None)` | Fill missing legacy HNSW dimensionality from `RAG_SIGN_EMBED_DIM`, default `768` for `clip-ViT-L-14` |
 
 Approximate result from prior notebook experiments:
 

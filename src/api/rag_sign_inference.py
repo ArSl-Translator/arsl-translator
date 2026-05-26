@@ -12,6 +12,7 @@ from src.api.karsl_mediapipe_inference import HAND_LANDMARKER_MODEL_PATH
 DEFAULT_INDEX_DIR = os.getenv("RAG_SIGN_INDEX_DIR", "./models/rag_sign_index")
 DEFAULT_COLLECTION = os.getenv("RAG_SIGN_COLLECTION", "arabic_sign_language")
 DEFAULT_CLIP_MODEL = os.getenv("RAG_SIGN_CLIP_MODEL", "clip-ViT-L-14")
+DEFAULT_EMBED_DIM = int(os.getenv("RAG_SIGN_EMBED_DIM", "768"))
 DEFAULT_FRAMES = int(os.getenv("RAG_SIGN_FRAMES", "10"))
 DEFAULT_YOLO_CONF = float(os.getenv("RAG_SIGN_YOLO_CONF", "0.40"))
 DEFAULT_USE_YOLO = os.getenv("RAG_SIGN_USE_YOLO", "false").lower() in {
@@ -422,8 +423,15 @@ def _patch_chroma_legacy_persistent_data() -> None:
         if not isinstance(loaded, dict):
             return loaded
 
+        dimensionality = (
+            loaded.get("dimensionality")
+            or loaded.get("dimension")
+            or loaded.get("dim")
+            or DEFAULT_EMBED_DIM
+        )
+
         return persistent_data_cls(
-            dimensionality=loaded.get("dimensionality"),
+            dimensionality=int(dimensionality),
             total_elements_added=int(loaded.get("total_elements_added", 0) or 0),
             max_seq_id=loaded.get("max_seq_id", 0) or 0,
             id_to_label=loaded.get("id_to_label") or {},
