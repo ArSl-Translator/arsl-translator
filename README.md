@@ -682,7 +682,7 @@ The API model key is:
 
 ```text
 arsl_rag
-```
+``` 
 
 Expected VM artifact:
 
