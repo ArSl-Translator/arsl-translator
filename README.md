@@ -1611,6 +1611,33 @@ docker compose -f docker-compose.prod.yml --env-file .env.production build api
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d api
 ```
 
+### Prediction fails with `libGLESv2.so.2`
+
+This is not specific to one model. The KArSL MediaPipe, Arabic Alphabet RAG, and
+ArabSign runtime paths can all touch native MediaPipe/OpenCV libraries inside the
+same API container. If the container is missing the OpenGL/GLES runtime libraries,
+prediction can fail with:
+
+```text
+libGLESv2.so.2: cannot open shared object file: No such file or directory
+```
+
+The API Dockerfile installs the required runtime packages:
+
+```text
+libgles2
+libegl1
+libgl1
+```
+
+After pulling the fix, rebuild the API image:
+
+```bash
+cd ~/arsl-translator
+docker compose -f docker-compose.prod.yml --env-file .env.production build --no-cache api
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d api
+```
+
 ### Webcam does not work on the VM remote desktop
 
 Remote desktop sessions often do not expose the local webcam to the browser. Use video upload for VM testing, or open the production site from your local machine where the browser can access your camera.
