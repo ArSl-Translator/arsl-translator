@@ -25,6 +25,28 @@ android {
         versionName = "1.0"
 
         resourceConfigurations += listOf("en", "ar")
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DGGML_OPENMP=OFF",
+                    "-DGGML_NATIVE=OFF",
+                    "-DLLAMA_BUILD_COMMON=OFF",
+                    "-DLLAMA_BUILD_TESTS=OFF",
+                    "-DLLAMA_BUILD_TOOLS=OFF",
+                    "-DLLAMA_BUILD_EXAMPLES=OFF",
+                    "-DLLAMA_BUILD_SERVER=OFF",
+                    "-DLLAMA_BUILD_APP=OFF",
+                    "-DLLAMA_CURL=OFF",
+                    "-DLLAMA_OPENSSL=OFF"
+                )
+            }
+        }
     }
 
     signingConfigs {
@@ -62,6 +84,12 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
     }
 }
 

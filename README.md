@@ -922,8 +922,8 @@ The current website APK matches the latest local release build:
 ```text
 Release APK: offline-chat-android/app/build/outputs/apk/release/app-release.apk
 Website APK: frontend/public/downloads/accessible-chat.apk
-SHA-256:     499EE72EEC0AB061B8E4CA06E9DEF3477988C06C5E1E6165D02317EC2A3AE0F5
-Size:        13,124,454 bytes
+SHA-256:     5440E72220FBC5EA4DB830674B1EB9B1C2683E3B4C7E428E8B1B642799404902
+Size:        18,303,790 bytes
 ```
 
 Demo link on the website:
