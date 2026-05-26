@@ -714,6 +714,14 @@ Compatibility fixes included in the production API:
 | `no such column: collections.topic` | Pin Chroma to the version compatible with the existing index |
 | `object of type 'int' has no len()` in Chroma seq IDs | Patch Chroma seq-id decoding in `rag_sign_inference.py` for the notebook-generated index |
 
+Approximate result from prior notebook experiments:
+
+```text
+Arabic Alphabet RAG accuracy: about 70%
+```
+
+This number is kept as an approximate prior-experiment result rather than a newly reproduced benchmark from this repository.
+
 Health output when loaded:
 
 ```json
@@ -926,6 +934,14 @@ docker compose exec api python scripts/phase3_train_baseline.py \
 ### MLflow Experiments
 
 Existing MLflow runs show this route as `resnet18_bilstm`. Some runs completed and some failed or were interrupted. There is currently no final production checkpoint mounted for this route, so the frontend correctly shows it as unavailable unless a checkpoint is added.
+
+Approximate result from earlier raw-frame KArSL experiments:
+
+```text
+Raw-frame KArSL baseline accuracy: about 30%
+```
+
+This is included only as historical context. The current production KArSL route is the MediaPipe landmark BiLSTM because it reached much stronger observed test accuracy.
 
 Recommended positioning:
 
