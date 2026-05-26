@@ -652,7 +652,7 @@ models/rag_sign_index/sign_index/chroma.sqlite3
 Browser webcam frame or uploaded video
   -> sample frames
   -> MediaPipe Hand Landmarker crop
-  -> YOLOv8 fallback crop
+  -> optional YOLOv8 fallback crop when enabled
   -> center crop fallback
   -> resize to 224 x 224
   -> SentenceTransformer CLIP image embedding, clip-ViT-L-14
@@ -672,7 +672,7 @@ Key runtime details:
 | Step | Implementation detail |
 |---|---|
 | Frame sampling | Samples a fixed number of frames from upload/webcam input |
-| Hand isolation | MediaPipe Hand Landmarker first, YOLO fallback, then center crop fallback |
+| Hand isolation | MediaPipe Hand Landmarker first, optional YOLO fallback, then center crop fallback |
 | Embedding | `SentenceTransformer` CLIP image encoder, default `clip-ViT-L-14` |
 | Vector store | Persistent Chroma DB from `sign_index.zip` |
 | Retrieval | Query nearest indexed sign examples |
@@ -701,8 +701,13 @@ RAG_SIGN_INDEX_DIR=/app/models/rag_sign_index
 RAG_SIGN_COLLECTION=arabic_sign_language
 RAG_SIGN_CLIP_MODEL=clip-ViT-L-14
 RAG_SIGN_FRAMES=10
+RAG_SIGN_USE_YOLO=false
 RAG_SIGN_USE_REMBG=false
 ```
+
+`RAG_SIGN_USE_YOLO` is off by default in production because loading YOLO during a
+prediction can add a large memory spike on a small CPU VM. The safer default path
+uses MediaPipe hand cropping and then center crop fallback.
 
 `RAG_SIGN_USE_REMBG` is off by default because the index was built from cropped images without guaranteed background removal. It can be turned on later if webcam lighting/background testing shows better retrieval.
 

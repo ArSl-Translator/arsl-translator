@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60 seconds for video processing
+  timeout: 120000, // RAG and video inference can be slow on the CPU VM
 });
 
 // Attach JWT token to every request

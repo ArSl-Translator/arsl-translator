@@ -43,6 +43,7 @@ services:
       RAG_SIGN_COLLECTION: ${RAG_SIGN_COLLECTION:-arabic_sign_language}
       RAG_SIGN_CLIP_MODEL: ${RAG_SIGN_CLIP_MODEL:-clip-ViT-L-14}
       RAG_SIGN_FRAMES: ${RAG_SIGN_FRAMES:-10}
+      RAG_SIGN_USE_YOLO: ${RAG_SIGN_USE_YOLO:-false}
       MEDIAPIPE_MODEL_PATH: /app/mediapipe_models/pose_landmarker_full.task
       HAND_LANDMARKER_MODEL_PATH: /app/mediapipe_models/hand_landmarker.task
       KARSL_MEDIAPIPE_MIRROR_INPUT: ${KARSL_MEDIAPIPE_MIRROR_INPUT:-true}

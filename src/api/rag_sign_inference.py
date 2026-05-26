@@ -14,6 +14,11 @@ DEFAULT_COLLECTION = os.getenv("RAG_SIGN_COLLECTION", "arabic_sign_language")
 DEFAULT_CLIP_MODEL = os.getenv("RAG_SIGN_CLIP_MODEL", "clip-ViT-L-14")
 DEFAULT_FRAMES = int(os.getenv("RAG_SIGN_FRAMES", "10"))
 DEFAULT_YOLO_CONF = float(os.getenv("RAG_SIGN_YOLO_CONF", "0.40"))
+DEFAULT_USE_YOLO = os.getenv("RAG_SIGN_USE_YOLO", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 DEFAULT_PAD = int(os.getenv("RAG_SIGN_PAD", "30"))
 DEFAULT_IMG_SIZE = int(os.getenv("RAG_SIGN_IMG_SIZE", "224"))
 DEFAULT_USE_REMBG = os.getenv("RAG_SIGN_USE_REMBG", "false").lower() in {
@@ -86,6 +91,7 @@ class ArabicAlphabetRAGInference:
         hand_model_path: str = HAND_LANDMARKER_MODEL_PATH,
         frames_to_sample: int = DEFAULT_FRAMES,
         yolo_conf: float = DEFAULT_YOLO_CONF,
+        use_yolo: bool = DEFAULT_USE_YOLO,
         pad: int = DEFAULT_PAD,
         img_size: int = DEFAULT_IMG_SIZE,
         use_rembg: bool = DEFAULT_USE_REMBG,
@@ -108,6 +114,7 @@ class ArabicAlphabetRAGInference:
         self.hand_model_path = hand_model_path
         self.frames_to_sample = frames_to_sample
         self.yolo_conf = yolo_conf
+        self.use_yolo = use_yolo
         self.pad = pad
         self.img_size = img_size
         self.use_rembg = use_rembg
@@ -220,7 +227,7 @@ class ArabicAlphabetRAGInference:
 
     def _preprocess_frame(self, frame: np.ndarray) -> Optional[Image.Image]:
         crop = self._crop_with_hand_landmarker(frame)
-        if crop is None:
+        if crop is None and self.use_yolo:
             crop = self._crop_with_yolo(frame)
         if crop is None:
             crop = self._center_crop(frame)
