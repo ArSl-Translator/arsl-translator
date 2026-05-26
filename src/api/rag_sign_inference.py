@@ -100,6 +100,8 @@ class ArabicAlphabetRAGInference:
         import chromadb
         from sentence_transformers import SentenceTransformer
 
+        _patch_chroma_int_seq_id()
+
         self.index_dir = resolved
         self.collection_name = collection_name
         self.clip_model_name = clip_model_name
@@ -370,3 +372,23 @@ class ArabicAlphabetRAGInference:
 
     def _uniform_sample(self, frames: List[np.ndarray], target: int) -> List[np.ndarray]:
         return [frames[index] for index in self._uniform_indices(len(frames), target)]
+
+
+def _patch_chroma_int_seq_id() -> None:
+    """Allow Chroma 0.5 to read older SQLite indexes whose seq_id is stored as int."""
+    try:
+        from chromadb.segment.impl.metadata import sqlite as chroma_sqlite
+    except Exception:
+        return
+
+    original = getattr(chroma_sqlite, "_decode_seq_id", None)
+    if original is None or getattr(original, "_arsl_accepts_int", False):
+        return
+
+    def decode_seq_id(seq_id):
+        if isinstance(seq_id, int):
+            return seq_id
+        return original(seq_id)
+
+    decode_seq_id._arsl_accepts_int = True
+    chroma_sqlite._decode_seq_id = decode_seq_id
