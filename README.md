@@ -39,8 +39,8 @@ The final system is not just a notebook or one trained model. It is a deployable
 | ArabSign model | Working when `models/arabsign_best_model.pt` exists |
 | Raw-frame KArSL baseline | Implemented as an experimental baseline, not currently served unless a checkpoint is provided |
 | MLflow | Available locally and in production deployment |
-| Assistive Message Studio | Chat-integrated AI writing assistant backed by Ollama; supports the base Qwen model and the fine-tuned `qwen25-healthcare` model |
-| Android offline chat APK | Buildable, signed, and downloadable from the website |
+| Assistive Message Studio | Chat-integrated AI writing assistant backed by Ollama online and optional local GGUF inference on Android |
+| Android offline chat APK | Buildable, signed, downloadable from the website, and able to download the fine-tuned assistant model on demand |
 | Production deployment | Dockerized for a GCP VM and domain deployment |
 
 ## High-Level Architecture
@@ -183,7 +183,12 @@ The feature supports three communication tasks:
 | `hearing_to_deaf` | Hearing person -> deaf user | Simplify a longer message into short, direct wording |
 | `suggestions` | Context -> ready text | Generate useful ready-to-send phrases or short replies for the current chat situation |
 
-The mobile app still works fully offline for Bluetooth chat. The AI writing assistant is an optional online feature that calls the deployed ArSL API, which then calls a local open-source model running on the VM through Ollama.
+The mobile app still works fully offline for Bluetooth chat. The AI writing assistant now has two user-selectable modes:
+
+| Mobile AI mode | What happens | Internet needed after setup |
+|---|---|---|
+| Online | Android calls the deployed ArSL API, and the API calls the VM-local Ollama model | Yes |
+| Offline | Android uses the downloaded `qwen25-healthcare-finetuned-q4.gguf` file through the bundled llama.cpp JNI runtime | No |
 
 In the Android chat:
 
@@ -191,6 +196,10 @@ In the Android chat:
 - The assisted user sees **Simplify** under incoming messages from the helper.
 - Both users can tap the sparkle button beside the message composer to generate context suggestions.
 - The assistant responds in the same language as the message when `language=auto`.
+- The AI settings sheet lets the user choose **Online** or **Offline**.
+- The app does not bundle the 941 MB GGUF inside the APK. Users download it only if they want local AI.
+- Download progress is resumable. Partial `.tmp` files are kept, resumed with HTTP range requests, retried after connection drops, and verified with SHA-256 before Offline AI is enabled.
+- The AI settings and download status strings are localized through Android resources, so Arabic/English follows the phone language.
 
 Runtime flow:
 
@@ -292,6 +301,28 @@ Final validation loss: about 0.357 at epoch 5
 ```
 
 The later validation loss increase indicates some overfitting, so the production API includes a deterministic cleanup guardrail. This guardrail removes leaked fine-tune prompt artifacts such as arrows, example labels, and instruction fragments before returning text to the mobile app.
+
+The same fine-tuned model is also exported for optional Android offline use:
+
+```text
+Hosted GGUF: https://arsl.hadighazi.com/models/qwen25-healthcare-finetuned-q4.gguf
+File name:   qwen25-healthcare-finetuned-q4.gguf
+Size:        986,047,968 bytes
+SHA-256:     d976297d8777616e8b297b544751a6a48155a3e2dada070e60f4a82fbd4f784a
+Quantization: Q4_K_M
+```
+
+Android offline inference path:
+
+```text
+ChatScreen
+  -> AiAssistantRouter
+  -> LocalLlmAssistant
+  -> OfflineModelManager verifies/downloads GGUF
+  -> LlamaBridge JNI
+  -> native llama.cpp runtime
+  -> local response cleaned by AiOutputCleaner
+```
 
 ## FastAPI Backend
 
@@ -574,6 +605,47 @@ This is the notebook-based Arabic alphabet recognition path from `sign_trans_ara
 
 Recognize static Arabic alphabet hand signs by retrieving the nearest visual examples from a Chroma vector index. This route is useful because the model artifact is the already-built `sign_index.zip`; no extra training is required on the VM.
 
+This is the project RAG approach. Instead of training a classifier checkpoint, it stores known sign examples in a vector database and retrieves the closest examples for a new webcam/video frame. The final prediction is produced by voting over the retrieved neighbors.
+
+### Artifact
+
+The RAG artifact comes from the notebook as:
+
+```text
+sign_index.zip
+```
+
+On the VM it is unpacked to:
+
+```text
+~/arsl-translator/models/rag_sign_index/
+```
+
+Inside the API container this is mounted as:
+
+```text
+/app/models/rag_sign_index
+```
+
+The important persisted files are:
+
+```text
+chroma.sqlite3
+<uuid>/
+  data_level0.bin
+  header.bin
+  index_metadata.pickle
+  length.bin
+  link_lists.bin
+```
+
+The API searches recursively for `chroma.sqlite3`, so both of these layouts are accepted:
+
+```text
+models/rag_sign_index/chroma.sqlite3
+models/rag_sign_index/sign_index/chroma.sqlite3
+```
+
 ### Runtime Flow
 
 ```text
@@ -588,6 +660,23 @@ Browser webcam frame or uploaded video
   -> nearest-neighbor voting across frames
   -> Arabic letter output
 ```
+
+Runtime implementation:
+
+```text
+src/api/rag_sign_inference.py
+```
+
+Key runtime details:
+
+| Step | Implementation detail |
+|---|---|
+| Frame sampling | Samples a fixed number of frames from upload/webcam input |
+| Hand isolation | MediaPipe Hand Landmarker first, YOLO fallback, then center crop fallback |
+| Embedding | `SentenceTransformer` CLIP image encoder, default `clip-ViT-L-14` |
+| Vector store | Persistent Chroma DB from `sign_index.zip` |
+| Retrieval | Query nearest indexed sign examples |
+| Aggregation | Vote across frames/neighbors to return one Arabic alphabet label |
 
 The API model key is:
 
@@ -616,6 +705,27 @@ RAG_SIGN_USE_REMBG=false
 ```
 
 `RAG_SIGN_USE_REMBG` is off by default because the index was built from cropped images without guaranteed background removal. It can be turned on later if webcam lighting/background testing shows better retrieval.
+
+Compatibility fixes included in the production API:
+
+| Issue seen during deployment | Fix |
+|---|---|
+| `np.float_ was removed in NumPy 2.0` | Pin API NumPy to `1.26.4` |
+| `no such column: collections.topic` | Pin Chroma to the version compatible with the existing index |
+| `object of type 'int' has no len()` in Chroma seq IDs | Patch Chroma seq-id decoding in `rag_sign_inference.py` for the notebook-generated index |
+
+Health output when loaded:
+
+```json
+{
+  "models": {
+    "arsl_rag": {
+      "loaded": true,
+      "path": "/app/models/rag_sign_index"
+    }
+  }
+}
+```
 
 ## Model 3: ArabSign GRU Attention Translator
 
