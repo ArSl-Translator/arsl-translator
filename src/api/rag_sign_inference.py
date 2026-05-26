@@ -107,6 +107,7 @@ class ArabicAlphabetRAGInference:
         from sentence_transformers import SentenceTransformer
 
         _patch_chroma_int_seq_id()
+        _patch_chroma_legacy_persistent_data()
 
         self.index_dir = resolved
         self.collection_name = collection_name
@@ -399,3 +400,36 @@ def _patch_chroma_int_seq_id() -> None:
 
     decode_seq_id._arsl_accepts_int = True
     chroma_sqlite._decode_seq_id = decode_seq_id
+
+
+def _patch_chroma_legacy_persistent_data() -> None:
+    """Allow Chroma 0.5 to load older HNSW metadata pickled as a plain dict."""
+    try:
+        from chromadb.segment.impl.vector import local_persistent_hnsw
+    except Exception:
+        return
+
+    persistent_data_cls = getattr(local_persistent_hnsw, "PersistentData", None)
+    if persistent_data_cls is None:
+        return
+
+    original = getattr(persistent_data_cls, "load_from_file", None)
+    if original is None or getattr(original, "_arsl_accepts_legacy_dict", False):
+        return
+
+    def load_from_file(filename: str):
+        loaded = original(filename)
+        if not isinstance(loaded, dict):
+            return loaded
+
+        return persistent_data_cls(
+            dimensionality=loaded.get("dimensionality"),
+            total_elements_added=int(loaded.get("total_elements_added", 0) or 0),
+            max_seq_id=loaded.get("max_seq_id", 0) or 0,
+            id_to_label=loaded.get("id_to_label") or {},
+            label_to_id=loaded.get("label_to_id") or {},
+            id_to_seq_id=loaded.get("id_to_seq_id") or {},
+        )
+
+    load_from_file._arsl_accepts_legacy_dict = True
+    persistent_data_cls.load_from_file = staticmethod(load_from_file)

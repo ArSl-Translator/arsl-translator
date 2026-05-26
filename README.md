@@ -718,6 +718,7 @@ Compatibility fixes included in the production API:
 | `np.float_ was removed in NumPy 2.0` | Pin API NumPy to `1.26.4` |
 | `no such column: collections.topic` | Pin Chroma to the version compatible with the existing index |
 | `object of type 'int' has no len()` in Chroma seq IDs | Patch Chroma seq-id decoding in `rag_sign_inference.py` for the notebook-generated index |
+| `'dict' object has no attribute 'dimensionality'` | Convert older Chroma HNSW metadata dictionaries into Chroma 0.5 persistent metadata objects at load time |
 
 Approximate result from prior notebook experiments:
 
