@@ -2,6 +2,7 @@
 import os
 import re
 import tempfile
+import traceback
 from typing import Dict, List, Literal, Optional, Set
 
 import cv2
@@ -221,7 +222,7 @@ def startup():
             model_registry["karsl"] = ModelInference(model_path=karsl_model_path)
             print(f"KArSL model loaded from {karsl_model_path}")
         except Exception as exc:
-            model_load_errors["karsl"] = str(exc)
+            model_load_errors["karsl"] = traceback.format_exc()
             print(f"Error loading KArSL model: {exc}")
     else:
         print("Warning: KArSL checkpoint missing. Train it or set MODEL_PATH.")
@@ -231,7 +232,7 @@ def startup():
             model_registry["karsl_mediapipe"] = KArSLMediaPipeInference(model_path=karsl_mediapipe_model_path)
             print(f"KArSL MediaPipe model loaded from {karsl_mediapipe_model_path}")
         except Exception as exc:
-            model_load_errors["karsl_mediapipe"] = str(exc)
+            model_load_errors["karsl_mediapipe"] = traceback.format_exc()
             print(f"Error loading KArSL MediaPipe model: {exc}")
     else:
         print("Warning: KArSL MediaPipe checkpoint missing.")
@@ -241,7 +242,7 @@ def startup():
             model_registry["arabsign"] = ArabSignInference(model_path=arabsign_model_path)
             print(f"ArabSign model loaded from {arabsign_model_path}")
         except Exception as exc:
-            model_load_errors["arabsign"] = str(exc)
+            model_load_errors["arabsign"] = traceback.format_exc()
             print(f"Error loading ArabSign model: {exc}")
     else:
         print("Warning: ArabSign checkpoint missing.")
@@ -251,7 +252,7 @@ def startup():
             model_registry["arsl_rag"] = ArabicAlphabetRAGInference(index_dir=rag_sign_index_path)
             print(f"Arabic alphabet RAG model loaded from {rag_sign_index_path}")
         except Exception as exc:
-            model_load_errors["arsl_rag"] = str(exc)
+            model_load_errors["arsl_rag"] = traceback.format_exc()
             print(f"Error loading Arabic alphabet RAG model: {exc}")
     else:
         print("Warning: Arabic alphabet RAG index missing.")
