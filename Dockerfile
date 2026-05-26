@@ -5,6 +5,7 @@ WORKDIR /app
 # system deps (opencv runtime needs these sometimes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg libsm6 libxext6 libpq-dev espeak-ng wget \
+    libgles2 libegl1 libgl1 \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /app/mediapipe_models \
