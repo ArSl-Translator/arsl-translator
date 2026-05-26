@@ -11,9 +11,15 @@ Accessible Chat is the Android companion application for the ArSL Translator pla
 - Runs blocking socket reads on background threads so the Compose UI remains responsive.
 - Stores conversations and messages locally with Room.
 - Includes Assistive Message Studio for optional message clarification, simplification, and context suggestions.
+- Lets users choose online AI or download the offline GGUF model for local AI.
 - Supports Arabic and English usage, including RTL text rendering.
 
-The core Bluetooth chat is fully offline. Assistive Message Studio is optional and online: the app calls the deployed ArSL API, and the API calls a local open-source Ollama model running on the VM. If the AI service is unavailable, Bluetooth messaging still works.
+The core Bluetooth chat is fully offline. Assistive Message Studio can run in two modes:
+
+- Online AI calls the deployed ArSL API, which calls the local Ollama model on the VM.
+- Offline AI downloads a GGUF model to app-private storage and uses the local inference bridge when the native llama.cpp library is included.
+
+If the AI service is unavailable, Bluetooth messaging still works.
 
 ## Project Structure
 
@@ -22,6 +28,7 @@ offline-chat-android/
   app/
     src/main/java/com/healthcare/offlinechat/
       ai/             API client for Assistive Message Studio
+                     online/offline AI mode, model download, checksum, local bridge
       bluetooth/      Bluetooth discovery, server/client sockets, framed transfer
       data/           Room entities, DAOs, and database
       media/          File handling, media metadata, and audio recording helpers
@@ -51,6 +58,17 @@ Client file:
 app/src/main/java/com/healthcare/offlinechat/ai/AiAssistantClient.kt
 ```
 
+Offline AI files:
+
+```text
+app/src/main/java/com/healthcare/offlinechat/ai/AiMode.kt
+app/src/main/java/com/healthcare/offlinechat/ai/AiModePreferences.kt
+app/src/main/java/com/healthcare/offlinechat/ai/OfflineModelManager.kt
+app/src/main/java/com/healthcare/offlinechat/ai/AiAssistantRouter.kt
+app/src/main/java/com/healthcare/offlinechat/ai/LocalLlmAssistant.kt
+app/src/main/java/com/healthcare/offlinechat/ai/LlamaBridge.kt
+```
+
 Default production API:
 
 ```text
@@ -65,6 +83,31 @@ qwen25-healthcare
 ```
 
 The backend also applies a cleanup guardrail for the fine-tuned model so leaked prompt text such as examples, arrows, or instruction fragments is not returned to the app.
+
+### Optional Offline AI Model
+
+The APK does not bundle the model. The chat screen AI settings can download it on demand:
+
+```text
+https://arsl.hadighazi.com/models/qwen25-healthcare-finetuned-q4.gguf
+```
+
+Model metadata:
+
+```text
+Size:    986,047,968 bytes
+SHA-256: d976297d8777616e8b297b544751a6a48155a3e2dada070e60f4a82fbd4f784a
+```
+
+The download manager writes to:
+
+```text
+context.filesDir/models/qwen25-healthcare-finetuned-q4.gguf
+```
+
+and verifies SHA-256 before enabling the Offline AI mode.
+
+`LlamaBridge.kt` is the JNI boundary for local inference. Until the native `arsl_llama` library is added to the APK, the app can download/manage the model but local generation reports that the offline engine is not installed.
 
 ## Build In Android Studio
 

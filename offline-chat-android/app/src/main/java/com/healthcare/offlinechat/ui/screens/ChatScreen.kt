@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,11 +25,23 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -36,6 +49,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +63,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.healthcare.offlinechat.R
+import com.healthcare.offlinechat.ai.AiAssistantRouter
+import com.healthcare.offlinechat.ai.AiMode
+import com.healthcare.offlinechat.ai.AiModePreferences
 import com.healthcare.offlinechat.ai.AiAssistantClient
+import com.healthcare.offlinechat.ai.LocalLlmAssistant
+import com.healthcare.offlinechat.ai.LlamaBridge
+import com.healthcare.offlinechat.ai.OfflineAiModel
+import com.healthcare.offlinechat.ai.OfflineModelManager
+import com.healthcare.offlinechat.ai.OfflineModelState
 import com.healthcare.offlinechat.data.ChatMessage
 import com.healthcare.offlinechat.media.AudioRecorder
 import com.healthcare.offlinechat.media.MediaHandler
@@ -78,19 +100,41 @@ fun ChatScreen(
 ) {
     val context = LocalContext.current
     val aiClient = remember { AiAssistantClient() }
+    val offlineModelManager = remember { OfflineModelManager(context) }
+    val aiPreferences = remember { AiModePreferences(context) }
+    val localAssistant = remember { LocalLlmAssistant(offlineModelManager, aiClient) }
+    val offlineEngineAvailable = remember { LlamaBridge.isAvailable() }
+    val aiRouter = remember {
+        AiAssistantRouter(
+            preferences = aiPreferences,
+            onlineClient = aiClient,
+            localAssistant = localAssistant,
+            modelManager = offlineModelManager
+        )
+    }
+    val offlineModelState by offlineModelManager.state.collectAsState()
     val scope = rememberCoroutineScope()
 
     var messageText by remember { mutableStateOf("") }
     var aiOutputs by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
     var aiStatus by remember { mutableStateOf<String?>(null) }
+    var aiMode by remember { mutableStateOf(aiRouter.getMode()) }
+    var showAiSettings by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val aiSettingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showMediaPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(showMediaPicker) {
         if (showMediaPicker) {
             sheetState.show()
+        }
+    }
+
+    LaunchedEffect(showAiSettings) {
+        if (showAiSettings) {
+            aiSettingsSheetState.show()
         }
     }
 
@@ -243,6 +287,37 @@ fun ChatScreen(
         )
     }
 
+    if (showAiSettings) {
+        ModalBottomSheet(
+            onDismissRequest = { showAiSettings = false },
+            sheetState = aiSettingsSheetState
+        ) {
+            AiSettingsSheet(
+                aiMode = aiMode,
+                offlineModelState = offlineModelState,
+                offlineEngineAvailable = offlineEngineAvailable,
+                onModeChange = { mode ->
+                    aiMode = mode
+                    aiRouter.setMode(mode)
+                },
+                onDownload = {
+                    scope.launch {
+                        offlineModelManager.downloadModel()
+                    }
+                },
+                onDelete = {
+                    scope.launch {
+                        offlineModelManager.deleteModel()
+                        if (aiMode == AiMode.OFFLINE) {
+                            aiMode = AiMode.ONLINE
+                            aiRouter.setMode(AiMode.ONLINE)
+                        }
+                    }
+                }
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -260,6 +335,15 @@ fun ChatScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showAiSettings = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "AI settings",
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -327,11 +411,11 @@ fun ChatScreen(
                                         aiOutputs = aiOutputs + (message.id to "Generating...")
                                         scope.launch {
                                             runCatching {
-                                                aiClient.assist(
+                                                aiRouter.assist(
                                                     text = message.content,
                                                     mode = aiMode,
                                                     context = "chat",
-                                                    language = aiClient.detectLanguage(message.content)
+                                                    language = aiRouter.detectLanguage(message.content)
                                                 )
                                             }.onSuccess { result ->
                                                 aiOutputs = aiOutputs + (message.id to result.output)
@@ -393,10 +477,10 @@ fun ChatScreen(
                     IconButton(
                         onClick = {
                             aiStatus = "Generating suggestions..."
-                            val suggestionLanguage = if (messageText.isBlank()) "ar" else aiClient.detectLanguage(messageText)
+                            val suggestionLanguage = if (messageText.isBlank()) "ar" else aiRouter.detectLanguage(messageText)
                             scope.launch {
                                 runCatching {
-                                    aiClient.assist(
+                                    aiRouter.assist(
                                         text = messageText,
                                         mode = "suggestions",
                                         context = "chat",
@@ -410,7 +494,7 @@ fun ChatScreen(
                                 }
                             }
                         },
-                        enabled = isConnected
+                        enabled = isConnected && (aiMode == AiMode.ONLINE || (offlineModelState.isDownloaded && offlineEngineAvailable))
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
@@ -472,5 +556,171 @@ fun ChatScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AiSettingsSheet(
+    aiMode: AiMode,
+    offlineModelState: OfflineModelState,
+    offlineEngineAvailable: Boolean,
+    onModeChange: (AiMode) -> Unit,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "AI assistant",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = aiMode == AiMode.ONLINE,
+                onClick = { onModeChange(AiMode.ONLINE) },
+                label = { Text("Online") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Cloud,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+            FilterChip(
+                selected = aiMode == AiMode.OFFLINE,
+                onClick = { onModeChange(AiMode.OFFLINE) },
+                enabled = offlineModelState.isDownloaded && offlineEngineAvailable,
+                label = { Text("Offline") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.PhoneAndroid,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+        }
+
+        HorizontalDivider()
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Offline model",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (offlineModelState.isDownloaded) Icons.Default.CheckCircle else Icons.Default.Download,
+                        contentDescription = null,
+                        tint = if (offlineModelState.isDownloaded) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        },
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (offlineModelState.isDownloaded) "Ready" else "Not downloaded",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            Text(
+                text = "qwen25-healthcare, ${OfflineAiModel.DISPLAY_SIZE}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+
+            if (offlineModelState.isDownloading) {
+                LinearProgressIndicator(
+                    progress = { offlineModelState.progress },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "${formatBytes(offlineModelState.downloadedBytes)} / ${formatBytes(offlineModelState.totalBytes)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+
+            offlineModelState.status?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            offlineModelState.error?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            if (offlineModelState.isDownloaded && !offlineEngineAvailable) {
+                Text(
+                    text = "Offline engine will be enabled after the native AI runtime is added to this APK.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onDownload,
+                enabled = !offlineModelState.isDownloading,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (offlineModelState.isDownloaded) "Re-download" else "Download")
+            }
+
+            OutlinedButton(
+                onClick = onDelete,
+                enabled = offlineModelState.isDownloaded || offlineModelState.isDownloading,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Delete")
+            }
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    val mb = bytes.toDouble() / (1024.0 * 1024.0)
+    return if (mb >= 1024.0) {
+        String.format("%.2f GB", mb / 1024.0)
+    } else {
+        String.format("%.0f MB", mb)
     }
 }
