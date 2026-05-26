@@ -27,6 +27,8 @@ artifacts/
 outputs/
 mlruns/
 models/*.pt
+models/*.gguf
+hosted_models/
 *.tgz
 
 # If you want to keep empty folders tracked:

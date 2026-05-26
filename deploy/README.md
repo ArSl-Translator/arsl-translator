@@ -202,6 +202,33 @@ curl -X POST https://arsl.hadighazi.com/api/ai/assist \
 
 The Android app still works without this model; only the optional AI writing assistant needs internet access to the deployed API.
 
+### Host The Optional Offline Android Model
+
+The Android app can offer an optional offline AI download without increasing the APK size. Host the GGUF from the VM:
+
+```bash
+cd ~/arsl-translator
+mkdir -p hosted_models
+cp ~/Downloads/qwen25-healthcare-finetuned-q4.gguf hosted_models/
+sha256sum hosted_models/qwen25-healthcare-finetuned-q4.gguf
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d caddy
+curl -I https://arsl.hadighazi.com/models/qwen25-healthcare-finetuned-q4.gguf
+```
+
+Expected model URL:
+
+```text
+https://arsl.hadighazi.com/models/qwen25-healthcare-finetuned-q4.gguf
+```
+
+Current SHA-256:
+
+```text
+d976297d8777616e8b297b544751a6a48155a3e2dada070e60f4a82fbd4f784a
+```
+
+The `hosted_models/` folder is ignored by Git and mounted read-only into the Caddy container.
+
 ## 7. GitHub Actions CI/CD
 
 Add these repository secrets in GitHub:

@@ -23,8 +23,10 @@ artifacts/
 outputs/
 models/*.pt
 models/*.zip
+models/*.gguf
 models/rag_sign_index/
 models/sign_index/
+hosted_models/
 
 # ---- Logs ----
 *.log
