@@ -105,9 +105,14 @@ The download manager writes to:
 context.filesDir/models/qwen25-healthcare-finetuned-q4.gguf
 ```
 
-and verifies SHA-256 before enabling the Offline AI mode.
+and verifies SHA-256 before enabling the Offline AI mode. Partial downloads are kept as
+`.tmp` files, resumed with HTTP range requests, and retried automatically after network
+interruptions so a sleeping phone or temporary connection drop does not force the user
+to restart a 941 MB download from zero.
 
-`LlamaBridge.kt` is the JNI boundary for local inference. Until the native `arsl_llama` library is added to the APK, the app can download/manage the model but local generation reports that the offline engine is not installed.
+`LlamaBridge.kt` is the JNI boundary for local inference. The release APK includes the
+native `arsl_llama` runtime for arm64 devices, so the downloaded GGUF can be used
+locally after verification.
 
 ## Build In Android Studio
 
@@ -165,8 +170,8 @@ Copy-Item `
 Current checked website APK matches the latest local release build:
 
 ```text
-SHA-256: 5440E72220FBC5EA4DB830674B1EB9B1C2683E3B4C7E428E8B1B642799404902
-Size:    18,303,790 bytes
+SHA-256: CA159C6B1D3E5BFCC37A965FB2B6AFAE6B451E8F578132C972ECFD4465A1620A
+Size:    18,307,470 bytes
 ```
 
 ## Installation Notes

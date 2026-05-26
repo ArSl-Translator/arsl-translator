@@ -7,9 +7,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlin.math.min
+
+enum class OfflineModelStatus {
+    STARTING,
+    RESUMING,
+    DOWNLOADING,
+    RETRYING,
+    READY,
+    REMOVED
+}
 
 data class OfflineModelState(
     val isDownloaded: Boolean = false,
@@ -17,7 +28,8 @@ data class OfflineModelState(
     val progress: Float = 0f,
     val downloadedBytes: Long = 0L,
     val totalBytes: Long = OfflineAiModel.SIZE_BYTES,
-    val status: String? = null,
+    val status: OfflineModelStatus? = null,
+    val retryAttempt: Int = 0,
     val error: String? = null
 )
 
@@ -37,57 +49,44 @@ class OfflineModelManager(context: Context) {
     suspend fun downloadModel() = withContext(Dispatchers.IO) {
         if (_state.value.isDownloading) return@withContext
         modelsDir.mkdirs()
-        tempFile.delete()
 
+        if (modelFile.exists() && !sha256(modelFile).equals(OfflineAiModel.SHA256, ignoreCase = true)) {
+            modelFile.delete()
+        }
+
+        var existingBytes = tempFile.length().takeIf { tempFile.exists() } ?: 0L
         _state.value = currentState().copy(
             isDownloading = true,
-            progress = 0f,
-            downloadedBytes = 0L,
-            status = "Starting download",
+            progress = (existingBytes.toDouble() / OfflineAiModel.SIZE_BYTES.toDouble()).coerceIn(0.0, 1.0).toFloat(),
+            downloadedBytes = existingBytes,
+            status = if (existingBytes > 0L) OfflineModelStatus.RESUMING else OfflineModelStatus.STARTING,
             error = null
         )
 
         try {
-            val connection = (URL(OfflineAiModel.URL).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 15000
-                readTimeout = 120000
-                setRequestProperty("Accept", "application/octet-stream")
+            var attempt = 0
+            var lastError: Exception? = null
+
+            while (attempt < MAX_ATTEMPTS && tempFile.length() < OfflineAiModel.SIZE_BYTES) {
+                attempt += 1
+                try {
+                    existingBytes = tempFile.length().takeIf { tempFile.exists() } ?: 0L
+                    downloadChunk(existingBytes)
+                    lastError = null
+                } catch (error: Exception) {
+                    lastError = error
+                    _state.value = _state.value.copy(
+                        isDownloading = true,
+                        status = OfflineModelStatus.RETRYING,
+                        retryAttempt = attempt,
+                        error = error.message
+                    )
+                    Thread.sleep(min(30_000L, 2_000L * attempt))
+                }
             }
 
-            try {
-                val statusCode = connection.responseCode
-                if (statusCode !in 200..299) {
-                    throw IllegalStateException("Model download failed with HTTP $statusCode")
-                }
-
-                val total = connection.contentLengthLong.takeIf { it > 0L } ?: OfflineAiModel.SIZE_BYTES
-                var downloaded = 0L
-
-                connection.inputStream.use { input ->
-                    tempFile.outputStream().buffered().use { output ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        while (true) {
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            output.write(buffer, 0, read)
-                            downloaded += read
-
-                            val progress = (downloaded.toDouble() / total.toDouble())
-                                .coerceIn(0.0, 1.0)
-                                .toFloat()
-                            _state.value = _state.value.copy(
-                                isDownloading = true,
-                                progress = progress,
-                                downloadedBytes = downloaded,
-                                totalBytes = total,
-                                status = "Downloading offline AI"
-                            )
-                        }
-                    }
-                }
-            } finally {
-                connection.disconnect()
+            if (lastError != null && tempFile.length() < OfflineAiModel.SIZE_BYTES) {
+                throw lastError
             }
 
             val actualHash = sha256(tempFile)
@@ -102,14 +101,14 @@ class OfflineModelManager(context: Context) {
             }
 
             _state.value = currentState().copy(
-                status = "Offline AI is ready",
+                status = OfflineModelStatus.READY,
                 error = null
             )
         } catch (error: Exception) {
-            tempFile.delete()
             _state.value = currentState().copy(
                 isDownloading = false,
-                progress = 0f,
+                progress = (tempFile.length().toDouble() / OfflineAiModel.SIZE_BYTES.toDouble()).coerceIn(0.0, 1.0).toFloat(),
+                downloadedBytes = tempFile.length(),
                 error = error.message ?: "Offline AI download failed"
             )
         }
@@ -118,7 +117,7 @@ class OfflineModelManager(context: Context) {
     suspend fun deleteModel() = withContext(Dispatchers.IO) {
         tempFile.delete()
         modelFile.delete()
-        _state.value = currentState().copy(status = "Offline AI removed", error = null)
+        _state.value = currentState().copy(status = OfflineModelStatus.REMOVED, error = null)
     }
 
     fun refresh() {
@@ -126,13 +125,78 @@ class OfflineModelManager(context: Context) {
     }
 
     private fun currentState(): OfflineModelState {
-        val downloaded = modelFile.length().takeIf { modelFile.exists() } ?: 0L
+        val downloaded = when {
+            modelFile.exists() -> modelFile.length()
+            tempFile.exists() -> tempFile.length()
+            else -> 0L
+        }
         return OfflineModelState(
             isDownloaded = isModelReady(),
-            progress = if (isModelReady()) 1f else 0f,
+            progress = if (isModelReady()) {
+                1f
+            } else {
+                (downloaded.toDouble() / OfflineAiModel.SIZE_BYTES.toDouble()).coerceIn(0.0, 1.0).toFloat()
+            },
             downloadedBytes = downloaded,
             totalBytes = OfflineAiModel.SIZE_BYTES
         )
+    }
+
+    private fun downloadChunk(existingBytes: Long) {
+        val connection = (URL(OfflineAiModel.URL).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 30000
+            readTimeout = 120000
+            setRequestProperty("Accept", "application/octet-stream")
+            if (existingBytes > 0L) {
+                setRequestProperty("Range", "bytes=$existingBytes-")
+            }
+        }
+
+        try {
+            val statusCode = connection.responseCode
+            if (existingBytes > 0L && statusCode == HttpURLConnection.HTTP_OK) {
+                tempFile.delete()
+                throw IllegalStateException("Server restarted download instead of resuming")
+            }
+            if (statusCode !in 200..299) {
+                throw IllegalStateException("Model download failed with HTTP $statusCode")
+            }
+
+            val total = when {
+                connection.getHeaderField("Content-Range")?.contains("/") == true ->
+                    connection.getHeaderField("Content-Range").substringAfterLast("/").toLongOrNull()
+                connection.contentLengthLong > 0L -> existingBytes + connection.contentLengthLong
+                else -> OfflineAiModel.SIZE_BYTES
+            } ?: OfflineAiModel.SIZE_BYTES
+
+            var downloaded = existingBytes
+            connection.inputStream.use { input ->
+                FileOutputStream(tempFile, existingBytes > 0L).buffered().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read == -1) break
+                        output.write(buffer, 0, read)
+                        downloaded += read
+
+                        val progress = (downloaded.toDouble() / total.toDouble())
+                            .coerceIn(0.0, 1.0)
+                            .toFloat()
+                        _state.value = _state.value.copy(
+                            isDownloading = true,
+                            progress = progress,
+                            downloadedBytes = downloaded,
+                            totalBytes = total,
+                            status = OfflineModelStatus.DOWNLOADING,
+                            error = null
+                        )
+                    }
+                }
+            }
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun sha256(file: File): String {
@@ -146,5 +210,9 @@ class OfflineModelManager(context: Context) {
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    companion object {
+        private const val MAX_ATTEMPTS = 8
     }
 }

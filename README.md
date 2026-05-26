@@ -903,7 +903,10 @@ The script logs:
 
 ## Android Offline Chat App
 
-The Android app is a companion assistive communication tool. It is not dependent on the AI backend and does not need internet connectivity.
+The Android app is a companion assistive communication tool. Bluetooth chat does not
+depend on the AI backend and does not need internet connectivity. Assistive Message
+Studio can either call the online VM assistant or use the optional downloaded GGUF
+model locally through the bundled llama.cpp JNI runtime.
 
 Project path:
 
@@ -917,13 +920,24 @@ APK download path in the website:
 frontend/public/downloads/accessible-chat.apk
 ```
 
+Optional offline AI model:
+
+```text
+URL:      https://arsl.hadighazi.com/models/qwen25-healthcare-finetuned-q4.gguf
+Size:     986,047,968 bytes
+SHA-256:  d976297d8777616e8b297b544751a6a48155a3e2dada070e60f4a82fbd4f784a
+```
+
+The app stores the model in app-private storage, verifies the checksum before enabling
+Offline AI, and resumes interrupted downloads from the existing partial file.
+
 The current website APK matches the latest local release build:
 
 ```text
 Release APK: offline-chat-android/app/build/outputs/apk/release/app-release.apk
 Website APK: frontend/public/downloads/accessible-chat.apk
-SHA-256:     5440E72220FBC5EA4DB830674B1EB9B1C2683E3B4C7E428E8B1B642799404902
-Size:        18,303,790 bytes
+SHA-256:     CA159C6B1D3E5BFCC37A965FB2B6AFAE6B451E8F578132C972ECFD4465A1620A
+Size:        18,307,470 bytes
 ```
 
 Demo link on the website:

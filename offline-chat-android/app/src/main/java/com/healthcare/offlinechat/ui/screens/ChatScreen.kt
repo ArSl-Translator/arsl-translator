@@ -72,6 +72,7 @@ import com.healthcare.offlinechat.ai.LlamaBridge
 import com.healthcare.offlinechat.ai.OfflineAiModel
 import com.healthcare.offlinechat.ai.OfflineModelManager
 import com.healthcare.offlinechat.ai.OfflineModelState
+import com.healthcare.offlinechat.ai.OfflineModelStatus
 import com.healthcare.offlinechat.data.ChatMessage
 import com.healthcare.offlinechat.media.AudioRecorder
 import com.healthcare.offlinechat.media.MediaHandler
@@ -114,6 +115,7 @@ fun ChatScreen(
     }
     val offlineModelState by offlineModelManager.state.collectAsState()
     val scope = rememberCoroutineScope()
+    val generatingText = stringResource(R.string.generating)
 
     var messageText by remember { mutableStateOf("") }
     var aiOutputs by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
@@ -342,7 +344,7 @@ fun ChatScreen(
                     IconButton(onClick = { showAiSettings = true }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "AI settings",
+                            contentDescription = stringResource(R.string.aisettings),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -397,8 +399,8 @@ fun ChatScreen(
                                 UserRole.ASSISTED -> "hearing_to_deaf"
                             }
                             val aiLabel = when (userRole) {
-                                UserRole.ASSISTANT -> "Make clearer"
-                                UserRole.ASSISTED -> "Simplify"
+                                UserRole.ASSISTANT -> stringResource(R.string.makeclearer)
+                                UserRole.ASSISTED -> stringResource(R.string.simplify)
                             }
                             MessageBubble(
                                 message = message,
@@ -408,7 +410,7 @@ fun ChatScreen(
                                 aiActionLabel = if (!message.isFromMe && message.messageType == com.healthcare.offlinechat.data.MessageType.TEXT.name) aiLabel else null,
                                 onAiAction = if (!message.isFromMe && message.messageType == com.healthcare.offlinechat.data.MessageType.TEXT.name) {
                                     {
-                                        aiOutputs = aiOutputs + (message.id to "Generating...")
+                                        aiOutputs = aiOutputs + (message.id to generatingText)
                                         scope.launch {
                                             runCatching {
                                                 aiRouter.assist(
@@ -420,7 +422,7 @@ fun ChatScreen(
                                             }.onSuccess { result ->
                                                 aiOutputs = aiOutputs + (message.id to result.output)
                                             }.onFailure { error ->
-                                                aiOutputs = aiOutputs + (message.id to (error.message ?: "AI assistant is unavailable"))
+                                                aiOutputs = aiOutputs + (message.id to (error.message ?: context.getString(R.string.aiunavailable)))
                                             }
                                         }
                                     }
@@ -476,7 +478,7 @@ fun ChatScreen(
 
                     IconButton(
                         onClick = {
-                            aiStatus = "Generating suggestions..."
+                            aiStatus = context.getString(R.string.generatingsuggestions)
                             val suggestionLanguage = if (messageText.isBlank()) "ar" else aiRouter.detectLanguage(messageText)
                             scope.launch {
                                 runCatching {
@@ -490,7 +492,7 @@ fun ChatScreen(
                                     messageText = result.output
                                     aiStatus = null
                                 }.onFailure { error ->
-                                    aiStatus = error.message ?: "AI assistant is unavailable"
+                                    aiStatus = error.message ?: context.getString(R.string.aiunavailable)
                                 }
                             }
                         },
@@ -498,7 +500,7 @@ fun ChatScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "AI suggestions",
+                            contentDescription = stringResource(R.string.aisuggestions),
                             tint = if (isConnected) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -575,7 +577,7 @@ private fun AiSettingsSheet(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "AI assistant",
+            text = stringResource(R.string.aiassistant),
             style = MaterialTheme.typography.titleLarge
         )
 
@@ -583,7 +585,7 @@ private fun AiSettingsSheet(
             FilterChip(
                 selected = aiMode == AiMode.ONLINE,
                 onClick = { onModeChange(AiMode.ONLINE) },
-                label = { Text("Online") },
+                label = { Text(stringResource(R.string.aionline)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Cloud,
@@ -596,7 +598,7 @@ private fun AiSettingsSheet(
                 selected = aiMode == AiMode.OFFLINE,
                 onClick = { onModeChange(AiMode.OFFLINE) },
                 enabled = offlineModelState.isDownloaded && offlineEngineAvailable,
-                label = { Text("Offline") },
+                label = { Text(stringResource(R.string.aioffline)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.PhoneAndroid,
@@ -616,7 +618,7 @@ private fun AiSettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Offline model",
+                    text = stringResource(R.string.offlinemodel),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -632,14 +634,18 @@ private fun AiSettingsSheet(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (offlineModelState.isDownloaded) "Ready" else "Not downloaded",
+                        text = if (offlineModelState.isDownloaded) {
+                            stringResource(R.string.offlinemodelready)
+                        } else {
+                            stringResource(R.string.offlinemodelnotdownloaded)
+                        },
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
             }
 
             Text(
-                text = "qwen25-healthcare, ${OfflineAiModel.DISPLAY_SIZE}",
+                text = stringResource(R.string.offlinemodelname, OfflineAiModel.DISPLAY_SIZE),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
@@ -658,7 +664,7 @@ private fun AiSettingsSheet(
 
             offlineModelState.status?.let {
                 Text(
-                    text = it,
+                    text = localizedOfflineStatus(offlineModelState),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -666,7 +672,7 @@ private fun AiSettingsSheet(
 
             offlineModelState.error?.let {
                 Text(
-                    text = it,
+                    text = stringResource(R.string.offlinedownloadfailed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -674,7 +680,7 @@ private fun AiSettingsSheet(
 
             if (offlineModelState.isDownloaded && !offlineEngineAvailable) {
                 Text(
-                    text = "Offline engine will be enabled after the native AI runtime is added to this APK.",
+                    text = stringResource(R.string.offlinemodelenginehint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
@@ -696,7 +702,13 @@ private fun AiSettingsSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (offlineModelState.isDownloaded) "Re-download" else "Download")
+                Text(
+                    if (offlineModelState.isDownloaded) {
+                        stringResource(R.string.redownload)
+                    } else {
+                        stringResource(R.string.download)
+                    }
+                )
             }
 
             OutlinedButton(
@@ -710,7 +722,7 @@ private fun AiSettingsSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete")
+                Text(stringResource(R.string.delete))
             }
         }
     }
@@ -722,5 +734,22 @@ private fun formatBytes(bytes: Long): String {
         String.format("%.2f GB", mb / 1024.0)
     } else {
         String.format("%.0f MB", mb)
+    }
+}
+
+@Composable
+private fun localizedOfflineStatus(state: OfflineModelState): String {
+    return when (state.status) {
+        OfflineModelStatus.STARTING -> stringResource(R.string.downloadstarting)
+        OfflineModelStatus.RESUMING -> stringResource(R.string.downloadresuming)
+        OfflineModelStatus.DOWNLOADING -> stringResource(R.string.downloadofflineai)
+        OfflineModelStatus.RETRYING -> stringResource(
+            R.string.downloadretrying,
+            state.retryAttempt,
+            8
+        )
+        OfflineModelStatus.READY -> stringResource(R.string.offlineaiready)
+        OfflineModelStatus.REMOVED -> stringResource(R.string.offlineairemoved)
+        null -> ""
     }
 }

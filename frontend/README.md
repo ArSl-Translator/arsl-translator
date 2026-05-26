@@ -67,8 +67,8 @@ Current checked APK matches the latest local release build:
 
 ```text
 Release APK: offline-chat-android/app/build/outputs/apk/release/app-release.apk
-SHA-256:     5440E72220FBC5EA4DB830674B1EB9B1C2683E3B4C7E428E8B1B642799404902
-Size:        18,303,790 bytes
+SHA-256:     CA159C6B1D3E5BFCC37A965FB2B6AFAE6B451E8F578132C972ECFD4465A1620A
+Size:        18,307,470 bytes
 ```
 
 When a new Android release is built, copy it into the frontend public folder:

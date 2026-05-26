@@ -36,6 +36,32 @@
     <string name="nomessageswaiting">في انتظار الاتصال…\n\nستظهر الرسائل هنا بعد الاتصال.</string>
     <string name="send">إرسال</string>
     <string name="back">رجوع</string>
+    <string name="aisettings">إعدادات الذكاء الاصطناعي</string>
+    <string name="aiassistant">مساعد الذكاء الاصطناعي</string>
+    <string name="aionline">متصل بالإنترنت</string>
+    <string name="aioffline">بدون إنترنت</string>
+    <string name="offlinemodel">نموذج الذكاء الاصطناعي بدون إنترنت</string>
+    <string name="offlinemodelready">جاهز</string>
+    <string name="offlinemodelnotdownloaded">غير محمّل</string>
+    <string name="offlinemodelname">qwen25-healthcare، %s</string>
+    <string name="download">تحميل</string>
+    <string name="redownload">إعادة التحميل</string>
+    <string name="delete">حذف</string>
+    <string name="downloadstarting">بدء التحميل</string>
+    <string name="downloadresuming">استكمال التحميل</string>
+    <string name="downloadofflineai">جارٍ تحميل الذكاء الاصطناعي</string>
+    <string name="downloadretrying">انقطع الاتصال، إعادة المحاولة %1$d/%2$d</string>
+    <string name="offlinedownloadfailed">توقف التحميل مؤقتاً. اضغط تحميل مرة أخرى للاستكمال.</string>
+    <string name="offlineaiready">الذكاء الاصطناعي بدون إنترنت جاهز</string>
+    <string name="offlineairemoved">تم حذف الذكاء الاصطناعي بدون إنترنت</string>
+    <string name="offlineenginemissing">محرك الذكاء الاصطناعي غير موجود في هذا التطبيق.</string>
+    <string name="offlinemodelenginehint">سيتم تفعيل المحرك بدون إنترنت بعد إضافة مشغل الذكاء الاصطناعي الأصلي إلى هذا التطبيق.</string>
+    <string name="generating">جارٍ الإنشاء...</string>
+    <string name="generatingsuggestions">جارٍ إنشاء الاقتراحات...</string>
+    <string name="aiunavailable">مساعد الذكاء الاصطناعي غير متاح</string>
+    <string name="aisuggestions">اقتراحات الذكاء الاصطناعي</string>
+    <string name="makeclearer">اجعلها أوضح</string>
+    <string name="simplify">بسّط</string>
 
     <!-- Media -->
     <string name="attachmedia">إرفاق وسائط</string>

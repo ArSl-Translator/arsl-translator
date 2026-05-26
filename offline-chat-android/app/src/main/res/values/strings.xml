@@ -36,6 +36,32 @@
     <string name="nomessageswaiting">Waiting for connection…\n\nMessages will appear here once connected.</string>
     <string name="send">Send</string>
     <string name="back">Back</string>
+    <string name="aisettings">AI settings</string>
+    <string name="aiassistant">AI assistant</string>
+    <string name="aionline">Online</string>
+    <string name="aioffline">Offline</string>
+    <string name="offlinemodel">Offline model</string>
+    <string name="offlinemodelready">Ready</string>
+    <string name="offlinemodelnotdownloaded">Not downloaded</string>
+    <string name="offlinemodelname">qwen25-healthcare, %s</string>
+    <string name="download">Download</string>
+    <string name="redownload">Re-download</string>
+    <string name="delete">Delete</string>
+    <string name="downloadstarting">Starting download</string>
+    <string name="downloadresuming">Resuming download</string>
+    <string name="downloadofflineai">Downloading offline AI</string>
+    <string name="downloadretrying">Connection interrupted, retrying %1$d/%2$d</string>
+    <string name="offlinedownloadfailed">Download paused. Tap Download again to resume.</string>
+    <string name="offlineaiready">Offline AI is ready</string>
+    <string name="offlineairemoved">Offline AI removed</string>
+    <string name="offlineenginemissing">Offline engine is not installed in this APK.</string>
+    <string name="offlinemodelenginehint">Offline engine will be enabled after the native AI runtime is added to this APK.</string>
+    <string name="generating">Generating...</string>
+    <string name="generatingsuggestions">Generating suggestions...</string>
+    <string name="aiunavailable">AI assistant is unavailable</string>
+    <string name="aisuggestions">AI suggestions</string>
+    <string name="makeclearer">Make clearer</string>
+    <string name="simplify">Simplify</string>
 
     <!-- Media -->
     <string name="attachmedia">Attach media</string>
