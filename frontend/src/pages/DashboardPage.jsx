@@ -189,7 +189,7 @@ export default function DashboardPage() {
                     <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
                     <YAxis allowDecimals={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#111827" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ChartPanel>
               </div>

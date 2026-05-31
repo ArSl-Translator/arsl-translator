@@ -73,7 +73,7 @@ export default function HistoryPage() {
 
           {!loading && !error && history?.items.length > 0 && (
             <>
-              <div className="overflow-hidden rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead className="bg-gray-50">
                     <tr className="border-b border-gray-200">

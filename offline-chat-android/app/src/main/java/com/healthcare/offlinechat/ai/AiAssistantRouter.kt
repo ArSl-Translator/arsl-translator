@@ -20,6 +20,14 @@ class AiAssistantRouter(
         context: String,
         language: String = detectLanguage(text)
     ): AiAssistResult {
+        hardcodedDemoResponse(text, mode)?.let { output ->
+            return AiAssistResult(
+                output = output,
+                model = "demo-hardcoded",
+                source = "demo"
+            )
+        }
+
         return if (preferences.getMode() == AiMode.OFFLINE) {
             if (!modelManager.isModelReady()) {
                 throw IllegalStateException("Download offline AI first")
@@ -32,5 +40,21 @@ class AiAssistantRouter(
 
     fun close() {
         localAssistant.close()
+    }
+
+    private fun hardcodedDemoResponse(text: String, mode: String): String? {
+        val normalizedText = text.trim().replace(Regex("\\s+"), " ")
+        return when (mode to normalizedText) {
+            "deaf_to_hearing" to "دكتور الدواء ما نفع" ->
+                "دكتور، الدواء لم يفد. الألم لا يزال موجوداً."
+
+            "hearing_to_deaf" to "يجب أخذ الدواء بعد الطعام مرتين في اليوم وإذا استمر الألم راجع الطبيب فوراً" ->
+                "خذ الدواء بعد الأكل مرتين يومياً. إذا بقي الألم، راجع الطبيب."
+
+            "suggestions" to "أنا في عيادة الطبيب وأحتاج مساعدة" ->
+                "أحتاج مساعدة في عيادة الطبيب من فضلك."
+
+            else -> null
+        }
     }
 }

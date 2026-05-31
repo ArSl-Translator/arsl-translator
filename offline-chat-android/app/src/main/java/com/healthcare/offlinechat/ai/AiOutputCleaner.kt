@@ -47,7 +47,7 @@ object AiOutputCleaner {
             .filter { it.isNotBlank() }
             .filter { line -> blocked.none { line.contains(it, ignoreCase = true) } }
 
-        return lines.take(5).mapIndexedNotNull { index, line ->
+        return lines.take(1).mapIndexedNotNull { index, line ->
             val text = line.replace(Regex("^\\s*\\d+\\s*[.)-]\\s*"), "").trim()
             if (text.isBlank()) null else "${index + 1}. $text"
         }.joinToString("\n")

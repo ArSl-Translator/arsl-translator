@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -86,6 +87,25 @@ import androidx.core.net.toUri
 import java.io.File
 import kotlinx.coroutines.launch
 
+private data class SuggestionPrompt(
+    val title: String,
+    val prompt: String,
+    val language: String = "ar"
+)
+
+private val suggestionPrompts = listOf(
+    SuggestionPrompt("في عيادة الطبيب", "أنا في عيادة الطبيب وأحتاج مساعدة"),
+    SuggestionPrompt("لم أفهم الطبيب", "لم أفهم ما قاله الطبيب"),
+    SuggestionPrompt("سؤال عن الدواء", "أحتاج أن أعرف كيف أتناول الدواء"),
+    SuggestionPrompt("نتيجة التحاليل", "أحتاج معرفة نتيجة التحاليل"),
+    SuggestionPrompt("الألم يزداد", "الألم يزداد سوءاً"),
+    SuggestionPrompt("مساعدة طارئة", "أحتاج مساعدة طارئة الآن"),
+    SuggestionPrompt("التحدث مع الممرضة", "أريد التحدث مع الممرضة"),
+    SuggestionPrompt("مساعدة في الفاتورة", "أحتاج مساعدة لفهم الفاتورة"),
+    SuggestionPrompt("أنا وحدي", "أنا وحدي في المستشفى وليس معي أحد"),
+    SuggestionPrompt("مساعدة للمشي", "أحتاج مساعدة للمشي")
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -122,10 +142,12 @@ fun ChatScreen(
     var aiStatus by remember { mutableStateOf<String?>(null) }
     var aiMode by remember { mutableStateOf(aiRouter.getMode()) }
     var showAiSettings by remember { mutableStateOf(false) }
+    var showSuggestionPicker by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val aiSettingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val suggestionSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showMediaPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(showMediaPicker) {
@@ -137,6 +159,12 @@ fun ChatScreen(
     LaunchedEffect(showAiSettings) {
         if (showAiSettings) {
             aiSettingsSheetState.show()
+        }
+    }
+
+    LaunchedEffect(showSuggestionPicker) {
+        if (showSuggestionPicker) {
+            suggestionSheetState.show()
         }
     }
 
@@ -320,6 +348,36 @@ fun ChatScreen(
         }
     }
 
+    if (showSuggestionPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showSuggestionPicker = false },
+            sheetState = suggestionSheetState
+        ) {
+            SuggestionPromptSheet(
+                prompts = suggestionPrompts,
+                onSelect = { suggestionPrompt ->
+                    showSuggestionPicker = false
+                    aiStatus = context.getString(R.string.generatingsuggestions)
+                    scope.launch {
+                        runCatching {
+                            aiRouter.assist(
+                                text = suggestionPrompt.prompt,
+                                mode = "suggestions",
+                                context = "chat",
+                                language = suggestionPrompt.language
+                            )
+                        }.onSuccess { result ->
+                            messageText = firstSuggestion(result.output)
+                            aiStatus = null
+                        }.onFailure { error ->
+                            aiStatus = error.message ?: context.getString(R.string.aiunavailable)
+                        }
+                    }
+                }
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -478,23 +536,7 @@ fun ChatScreen(
 
                     IconButton(
                         onClick = {
-                            aiStatus = context.getString(R.string.generatingsuggestions)
-                            val suggestionLanguage = if (messageText.isBlank()) "ar" else aiRouter.detectLanguage(messageText)
-                            scope.launch {
-                                runCatching {
-                                    aiRouter.assist(
-                                        text = messageText,
-                                        mode = "suggestions",
-                                        context = "chat",
-                                        language = suggestionLanguage
-                                    )
-                                }.onSuccess { result ->
-                                    messageText = result.output
-                                    aiStatus = null
-                                }.onFailure { error ->
-                                    aiStatus = error.message ?: context.getString(R.string.aiunavailable)
-                                }
-                            }
+                            showSuggestionPicker = true
                         },
                         enabled = isConnected && (aiMode == AiMode.ONLINE || (offlineModelState.isDownloaded && offlineEngineAvailable))
                     ) {
@@ -555,6 +597,42 @@ fun ChatScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionPromptSheet(
+    prompts: List<SuggestionPrompt>,
+    onSelect: (SuggestionPrompt) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "اختر الحالة",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = "سيحوّلها الذكاء الاصطناعي إلى رسالة واحدة جاهزة للإرسال.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 420.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(prompts) { prompt ->
+                OutlinedButton(
+                    onClick = { onSelect(prompt) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(prompt.title)
                 }
             }
         }
@@ -726,6 +804,16 @@ private fun AiSettingsSheet(
             }
         }
     }
+}
+
+private fun firstSuggestion(output: String): String {
+    return output
+        .lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .map { it.replace(Regex("^\\s*\\d+\\s*[.)-]\\s*"), "").trim() }
+        .firstOrNull { it.isNotBlank() }
+        .orEmpty()
 }
 
 private fun formatBytes(bytes: Long): String {

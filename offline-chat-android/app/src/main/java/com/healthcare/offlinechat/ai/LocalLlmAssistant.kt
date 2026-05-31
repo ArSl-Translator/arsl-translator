@@ -33,7 +33,7 @@ class LocalLlmAssistant(
             }
 
             val prompt = buildPrompt(text, mode, language)
-            val maxTokens = if (mode == "suggestions") 140 else 80
+            val maxTokens = if (mode == "suggestions") 60 else 80
             val raw = LlamaBridge.complete(handle, prompt, maxTokens, 0.0f).trim()
             val cleaned = AiOutputCleaner.clean(raw, mode)
             AiAssistResult(
@@ -99,9 +99,9 @@ class LocalLlmAssistant(
             """.trimIndent()
 
             else -> """
-                Write 3 to 5 ready-to-send messages from the patient.
-                Each message must be from the patient's perspective. Number the suggestions.
-                Write only the suggestions.
+                Write one ready-to-send message from the patient.
+                The message must be from the patient's perspective.
+                Write only the final message.
 
                 Input: $input
                 Answer:
@@ -112,9 +112,9 @@ class LocalLlmAssistant(
     private fun fallback(text: String, mode: String, language: String): String {
         if (mode != "suggestions") return text
         return if (language == "ar") {
-            "1. أحتاج مساعدة.\n2. من فضلك اشرح بطريقة أبسط.\n3. هل يمكنك الكتابة؟"
+            "أحتاج مساعدة."
         } else {
-            "1. I need help.\n2. Please explain more simply.\n3. Can you write that down?"
+            "I need help."
         }
     }
 }

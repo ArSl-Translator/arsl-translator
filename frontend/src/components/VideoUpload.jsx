@@ -57,7 +57,7 @@ const VideoUpload = () => {
   };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="panel overflow-hidden">
         <div className="border-b border-gray-200 bg-white px-6 py-5">
           <div className="flex items-start justify-between gap-4">
@@ -154,9 +154,7 @@ const VideoUpload = () => {
         </div>
       </div>
 
-      <div className="space-y-6">
-        <PredictionResults result={result} loading={loading} />
-      </div>
+      <PredictionResults result={result} loading={loading} />
     </div>
   );
 };
